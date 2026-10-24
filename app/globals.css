@@ -1,1 +1,71 @@
 @import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f5ef;
+  --color-paper-deep: #eeede4;
+  --color-surface: #ffffff;
+  --color-ink: #10140f;
+  --color-ink-soft: #232a20;
+  --color-muted: #5c6459;
+  --color-line: #dddcd1;
+  --color-acid: #c9f24d;
+  --color-acid-deep: #a9d92b;
+  --color-acid-ink: #1c2a05;
+
+  --color-numpy: #4d77cf;
+  --color-pandas: #8b3fd9;
+  --color-matplotlib: #0f7490;
+  --color-sklearn: #d9782d;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SFMono-Regular", "Cascadia Code", "JetBrains Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
+
+  --radius-card: 1.25rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-acid);
+    color: var(--color-acid-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+}
+
+@utility grid-lines {
+  background-image:
+    linear-gradient(to right, rgb(16 20 15 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(16 20 15 / 0.055) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+}
+
+@utility dotted-line {
+  background-image: radial-gradient(var(--color-line) 1px, transparent 1px);
+  background-size: 0.75rem 0.75rem;
+}
