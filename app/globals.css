@@ -56,6 +56,24 @@
   samp {
     font-family: var(--font-mono);
   }
+
+  .cm-editor {
+    font-size: 0.875rem;
+  }
+
+  .cm-editor .cm-scroller {
+    font-family: var(--font-mono);
+    line-height: 1.65;
+  }
+
+  .cm-editor .cm-content {
+    padding-block: 0.75rem;
+  }
+
+  .cm-editor.cm-focused {
+    outline: 2px solid var(--color-acid);
+    outline-offset: -2px;
+  }
 }
 
 @utility grid-lines {

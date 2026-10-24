@@ -78,7 +78,7 @@ export default function LearnPage() {
                 New to Python notebooks?
               </p>
               <p className="mt-2 text-lg font-semibold">
-                Start with the two-minute orientation.
+                Start with the short orientation.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-acid">
