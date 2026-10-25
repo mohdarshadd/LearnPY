@@ -11,6 +11,8 @@ export type PyodideState = "idle" | "loading" | "ready" | "running";
 export type PlotOutput = {
   mimeType: "image/png";
   dataUrl: string;
+  width: number | null;
+  height: number | null;
 };
 
 export type ExecutionErrorKind = "python" | "internal" | "timeout";

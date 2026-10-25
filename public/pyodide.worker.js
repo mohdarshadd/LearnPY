@@ -203,6 +203,35 @@ function splitError(error) {
   };
 }
 
+function readPngSize(base64) {
+  if (base64.length < 32) {
+    return null;
+  }
+
+  try {
+    const bytes = Uint8Array.from(atob(base64.slice(0, 32)), (character) =>
+      character.charCodeAt(0),
+    );
+    const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+
+    if (signature.some((value, index) => bytes[index] !== value)) {
+      return null;
+    }
+
+    const view = new DataView(bytes.buffer);
+    const width = view.getUint32(16);
+    const height = view.getUint32(20);
+
+    if (width === 0 || height === 0) {
+      return null;
+    }
+
+    return { width, height };
+  } catch {
+    return null;
+  }
+}
+
 function parsePlots(json) {
   if (!json) {
     return [];
@@ -221,10 +250,16 @@ function parsePlots(json) {
           typeof item === "string" && item.length > 0 && item.length <= MAX_PLOT_CHARS,
       )
       .slice(0, MAX_PLOTS)
-      .map((item) => ({
-        mimeType: "image/png",
-        dataUrl: `data:image/png;base64,${item}`,
-      }));
+      .map((item) => {
+        const size = readPngSize(item);
+
+        return {
+          mimeType: "image/png",
+          dataUrl: `data:image/png;base64,${item}`,
+          width: size?.width ?? null,
+          height: size?.height ?? null,
+        };
+      });
   } catch {
     return [];
   }
