@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LibraryBadge } from "@/components/library-badge";
 import { ContentBlocks } from "@/components/content-blocks";
+import { ExerciseCard } from "@/components/exercise-card";
+import { Quiz } from "@/components/quiz";
 import { getLibrary, getTrackStyle } from "@/content/libraries";
 import { getLessonNavigation } from "@/content/registry";
 import { isLibraryId, type Lesson } from "@/content/schema";
@@ -31,6 +33,7 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
   const trackName = getTrackName(lesson);
   const trackHref = getTrackHref(lesson);
   const navigation = getLessonNavigation(lesson);
+  const hasPractice = lesson.exercises.length > 0 || lesson.quiz.length > 0;
 
   const previousLesson = navigation.previous;
   const nextLesson = navigation.next;
@@ -135,6 +138,48 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
             ))}
           </div>
 
+          {hasPractice ? (
+            <section
+              aria-labelledby="practice-heading"
+              className="mt-14 scroll-mt-28 border-t border-line pt-10"
+              id="practice"
+            >
+              <div className="max-w-2xl">
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted">
+                  Practice
+                </p>
+                <h2
+                  className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl"
+                  id="practice-heading"
+                >
+                  Make it stick
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-muted">
+                  Run the tests as often as you like. Hints and the solution
+                  are available when you need them.
+                </p>
+              </div>
+
+              {lesson.exercises.length > 0 ? (
+                <div className="mt-6 space-y-5">
+                  {lesson.exercises.map((exercise) => (
+                    <ExerciseCard
+                      exercise={exercise}
+                      key={exercise.id}
+                      lessonPackages={lesson.packages}
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {lesson.quiz.length > 0 ? (
+                <div className="mt-6">
+                  <Quiz questions={lesson.quiz} />
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
           <nav
             aria-label="Lesson navigation"
             className="mt-14 grid gap-3 border-t border-line pt-8 sm:grid-cols-2"
@@ -216,6 +261,19 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
                     </a>
                   </li>
                 ))}
+                {hasPractice ? (
+                  <li>
+                    <a
+                      className="group flex gap-3 border-l border-transparent py-1 pl-3 text-sm leading-6 text-muted transition-colors hover:border-ink hover:text-ink"
+                      href="#practice"
+                    >
+                      <span className="font-mono text-[0.62rem] text-muted/70">
+                        {String(lesson.sections.length + 1).padStart(2, "0")}
+                      </span>
+                      <span>Practice</span>
+                    </a>
+                  </li>
+                ) : null}
               </ol>
             </nav>
 

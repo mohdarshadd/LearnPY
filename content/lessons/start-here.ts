@@ -165,8 +165,61 @@ export const startHereLessons: Lesson[] = [
         ],
       },
     ],
-    exercises: [],
-    quiz: [],
+    exercises: [
+      {
+        id: "updated-average",
+        prompt:
+          "Add the new reading of 20 to the list, then compute the updated average.",
+        starterCode: `readings = [12, 15, 11, 18, 14, 20]
+average = 0.0`,
+        tests: [
+          {
+            name: "average is updated to 15.0",
+            code: "assert average == 15.0, f\"expected 15.0, got {average!r}\"",
+          },
+          {
+            name: "the readings list keeps all six values",
+            code: "assert readings == [12, 15, 11, 18, 14, 20]",
+          },
+        ],
+        hints: [
+          "Use sum(readings) divided by len(readings).",
+          "The six readings add up to 90.",
+        ],
+        solution: `readings = [12, 15, 11, 18, 14, 20]
+average = sum(readings) / len(readings)
+print(average)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "track-after-orientation",
+        question:
+          "You need to clean a messy CSV and compute totals by category. Which track should you open next?",
+        options: [
+          { id: "numpy", label: "NumPy" },
+          { id: "pandas", label: "pandas" },
+          { id: "matplotlib", label: "Matplotlib" },
+          { id: "sklearn", label: "scikit-learn" },
+        ],
+        answerId: "pandas",
+        explanation:
+          "pandas is built for labeled tables: loading CSV files, cleaning values, grouping rows, and aggregating totals. NumPy comes first for array fundamentals, but pandas is the direct tool for this job.",
+      },
+      {
+        id: "where-code-runs",
+        question: "Where does the code in a runnable cell execute?",
+        options: [
+          { id: "browser", label: "In your browser, using Pyodide" },
+          { id: "server", label: "On the LearnPY server" },
+          { id: "local", label: "In a local Python installation" },
+        ],
+        answerId: "browser",
+        explanation:
+          "Pyodide runs Python in a Web Worker in your browser. Your code is not sent to a LearnPY server, and you do not need Python installed locally.",
+      },
+    ],
     next: {
       label: "Open the NumPy track",
       href: "/learn/numpy",

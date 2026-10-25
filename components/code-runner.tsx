@@ -1,34 +1,14 @@
 "use client";
 
-import { python } from "@codemirror/lang-python";
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlotGallery } from "@/components/plot-gallery";
+import { PythonEditor } from "@/components/python-editor";
+import { RunnerOutput } from "@/components/runner-output";
 import type { PyodideRunner as PyodideRunnerClient } from "@/lib/pyodide/client";
 import type {
   ExecutionResult,
   PyodideState,
 } from "@/lib/pyodide/protocol";
 import { cn } from "@/lib/cn";
-
-const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[240px] items-center justify-center font-mono text-xs text-paper/45">
-      Loading editor&hellip;
-    </div>
-  ),
-});
-
-const editorExtensions = [python()];
-
-const editorSetup = {
-  lineNumbers: true,
-  highlightActiveLine: true,
-  highlightActiveLineGutter: true,
-  foldGutter: false,
-  autocompletion: false,
-};
 
 type CodeRunnerProps = {
   code: string;
@@ -216,16 +196,7 @@ export function CodeRunner({
         className="border-y border-white/10 bg-[#0d120c]"
         onKeyDown={handleKeyDown}
       >
-        <CodeMirror
-          aria-label="Python code editor"
-          basicSetup={editorSetup}
-          extensions={editorExtensions}
-          height="240px"
-          onChange={setSource}
-          spellCheck={false}
-          theme="dark"
-          value={source}
-        />
+        <PythonEditor onChange={setSource} value={source} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
@@ -283,64 +254,7 @@ export function CodeRunner({
             </p>
           ) : null}
 
-          {result ? (
-            <>
-              {result.error ? (
-                <div
-                  className="rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2"
-                  role="alert"
-                >
-                  <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-red-200">
-                    {result.error.name}
-                  </p>
-                  <p className="mt-1 text-red-100">{result.error.message}</p>
-                  {result.error.traceback ? (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer font-mono text-[0.65rem] uppercase tracking-[0.1em] text-red-200/80">
-                        Traceback
-                      </summary>
-                      <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-red-100/80">
-                        {result.error.traceback}
-                      </pre>
-                    </details>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {result.stdout ? (
-                <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words font-mono text-[0.82rem] leading-relaxed text-paper/90">
-                  {result.stdout}
-                </pre>
-              ) : null}
-
-              {result.value ? (
-                <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-[0.82rem] text-paper/75">
-                  <span className="text-paper/35">Out: </span>
-                  {result.value}
-                </p>
-              ) : null}
-
-              {result.stderr ? (
-                <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-amber-300/25 bg-amber-300/5 px-3 py-2 font-mono text-xs leading-relaxed text-amber-100/85">
-                  {result.stderr}
-                </pre>
-              ) : null}
-
-              {result.plots.length > 0 ? (
-                <PlotGallery plots={result.plots} />
-              ) : null}
-
-              {result.ok &&
-              !result.stdout &&
-              !result.value &&
-              !result.stderr &&
-              result.plots.length === 0 ? (
-                <p className="text-paper/45">
-                  Ran successfully with no output.
-                </p>
-              ) : null}
-            </>
-          ) : null}
+          {result ? <RunnerOutput result={result} /> : null}
         </div>
       </div>
     </section>
