@@ -4,15 +4,14 @@ import { ContentBlocks } from "@/components/content-blocks";
 import { ExerciseCard } from "@/components/exercise-card";
 import { Quiz } from "@/components/quiz";
 import { getLibrary, getTrackStyle } from "@/content/libraries";
-import { getLessonNavigation } from "@/content/registry";
+import {
+  getLessonHref,
+  getLessonNavigation,
+  getLessons,
+} from "@/content/registry";
 import { isLibraryId, type Lesson } from "@/content/schema";
 import { cn } from "@/lib/cn";
-
-function getLessonHref(lesson: Lesson) {
-  return isLibraryId(lesson.library)
-    ? `/learn/${lesson.library}/${lesson.slug}`
-    : "/learn/start-here";
-}
+import { LessonCompletion } from "@/components/lesson-completion";
 
 function getTrackHref(lesson: Lesson) {
   return isLibraryId(lesson.library)
@@ -34,6 +33,7 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
   const trackHref = getTrackHref(lesson);
   const navigation = getLessonNavigation(lesson);
   const hasPractice = lesson.exercises.length > 0 || lesson.quiz.length > 0;
+  const trackLessonIds = getLessons(lesson.library).map((item) => item.id);
 
   const previousLesson = navigation.previous;
   const nextLesson = navigation.next;
@@ -179,6 +179,11 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
               ) : null}
             </section>
           ) : null}
+
+          <LessonCompletion
+            lessonId={lesson.id}
+            trackLessonIds={trackLessonIds}
+          />
 
           <nav
             aria-label="Lesson navigation"

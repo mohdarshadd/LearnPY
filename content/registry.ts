@@ -135,6 +135,12 @@ export function getLessonById(id: string): Lesson | undefined {
   return lessons.find((lesson) => lesson.id === id);
 }
 
+export function getLessonHref(lesson: Lesson): string {
+  return isLibraryId(lesson.library)
+    ? `/learn/${lesson.library}/${lesson.slug}`
+    : "/learn/start-here";
+}
+
 export function getStartHereLesson(): Lesson | undefined {
   return getLessonById("start-here");
 }

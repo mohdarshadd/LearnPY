@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LibraryCard } from "@/components/library-card";
 import { libraries } from "@/content/libraries";
+import { ProgressOverview } from "@/components/progress-overview";
 import {
+  getLessonHref,
   getLibraryCounts,
   getStartHereLesson,
   lessons,
@@ -19,6 +21,11 @@ export default function LearnPage() {
     getLibraryCounts().map((entry) => [entry.library, entry.count]),
   );
   const startHere = getStartHereLesson();
+  const progressLessons = lessons.map((lesson) => ({
+    id: lesson.id,
+    title: lesson.title,
+    href: getLessonHref(lesson),
+  }));
 
   return (
     <div>
@@ -92,6 +99,10 @@ export default function LearnPage() {
             </span>
           </Link>
         ) : null}
+
+        <div className="mb-8">
+          <ProgressOverview lessons={progressLessons} />
+        </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           {libraries.map((library) => (
