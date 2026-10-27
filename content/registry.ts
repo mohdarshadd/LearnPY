@@ -181,6 +181,10 @@ export function getReference(
   );
 }
 
+export function getReferenceById(id: string): Reference | undefined {
+  return references.find((reference) => reference.id === id);
+}
+
 export function getLibraryCounts(): Array<{
   library: LibraryId;
   count: number;

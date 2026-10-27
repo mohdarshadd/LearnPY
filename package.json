@@ -12,6 +12,7 @@
   "dependencies": {
     "@codemirror/lang-python": "^6.2.1",
     "@uiw/react-codemirror": "^4.25.12",
+    "fuse.js": "^7.5.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
