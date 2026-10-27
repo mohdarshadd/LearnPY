@@ -489,5 +489,239 @@ print(centered)`,
           "keepdims keeps the axis in the result with length 1. A (3, 1) mean can broadcast across a (3, 4) matrix; a (3,) mean cannot.",
       },
     ],
+    next: {
+      label: "Continue to randomness and linear algebra",
+      href: "/learn/numpy/random-linear-algebra",
+    },
+  },
+  {
+    id: "numpy-random-linalg",
+    library: "numpy",
+    slug: "random-linear-algebra",
+    title: "Randomness and linear algebra",
+    summary:
+      "Generate reproducible random data with a seeded Generator, then use matrix products and solve to work with systems of equations.",
+    minutes: 10,
+    level: "beginner",
+    packages: ["numpy"],
+    objectives: [
+      "Create reproducible random values with np.random.default_rng.",
+      "Choose between elementwise multiplication and the @ matrix product.",
+      "Check matrix shapes before multiplying.",
+      "Solve a linear system without computing an explicit inverse.",
+    ],
+    sections: [
+      {
+        id: "generators",
+        title: "Random numbers from a Generator",
+        blocks: [
+          {
+            type: "text",
+            text: "Modern NumPy uses a Generator object created by np.random.default_rng(). The generator has methods for common distributions: integers draws whole numbers, normal draws from a bell curve, and permutation shuffles a sequence.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nrng = np.random.default_rng(7)\n\nprint(rng.integers(1, 7, size=5))\nprint(rng.normal(loc=20, scale=3, size=4))\nprint(rng.permutation(np.arange(5)))',
+            language: "python",
+            caption: "Dice, sensor noise, and a shuffled range",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "rng.integers(low, high, size) includes low and excludes high, just like range().",
+              "rng.normal(loc, scale, size) uses the mean and standard deviation you provide.",
+              "rng.permutation(values) returns a shuffled copy of the sequence.",
+            ],
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Keep one generator",
+            text: "Create the generator once near the top of your program and pass it to the functions that need randomness. Re-seeding inside a loop can produce repeated blocks of values.",
+          },
+        ],
+      },
+      {
+        id: "seeds",
+        title: "Seeds make a run reproducible",
+        blocks: [
+          {
+            type: "text",
+            text: "A seed initializes the generator's internal state. Two generators created with the same seed and asked for the same sequence produce the same values. That does not make the values predictable in a security sense; it makes experiments repeatable.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nfirst = np.random.default_rng(42).normal(size=3)\nsecond = np.random.default_rng(42).normal(size=3)\n\nprint(np.array_equal(first, second))',
+            language: "python",
+            caption: "Same seed, same starting stream",
+            output: "True",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The exact numbers can change across NumPy versions, so do not build tests around a hard-coded stream. Test the properties you care about, such as shape, range, or a seeded comparison within the same run.",
+          },
+        ],
+      },
+      {
+        id: "matrix-products",
+        title: "Elementwise multiplication versus matrix products",
+        blocks: [
+          {
+            type: "text",
+            text: "The * operator multiplies matching positions. The @ operator performs a matrix product, where each output value is a dot product of a row from the left and a column from the right. They answer different questions and are not interchangeable.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nA = np.array([[1, 2], [3, 4]])\nB = np.array([[5, 6], [7, 8]])\n\nprint(A * B)\nprint(A @ B)',
+            language: "python",
+            caption: "The same two matrices, two operations",
+            output: "[[ 5 12]\n [21 32]]\n[[19 22]\n [43 50]]",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "For A @ B, the inner dimensions must agree. A has shape (2, 2) and B has shape (2, 2), so the result is (2, 2). If A were (4, 2) and B were (2, 3), the inner 2s would match and the result would be (4, 3).",
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "A * B is not A @ B",
+            text: "If you mean linear algebra, write @. The star operator is elementwise, even when both arrays are square matrices.",
+          },
+        ],
+      },
+      {
+        id: "solving-systems",
+        title: "Solving a linear system",
+        blocks: [
+          {
+            type: "text",
+            text: "A system such as A @ x = b asks for the vector x that satisfies every equation. np.linalg.solve(A, b) computes that solution directly. It is more stable and usually faster than multiplying by np.linalg.inv(A).",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nA = np.array([[2.0, 1.0], [1.0, 3.0]])\nb = np.array([5.0, 10.0])\n\nx = np.linalg.solve(A, b)\n\nprint(x)\nprint(A @ x)',
+            language: "python",
+            caption: "Find x, then verify the original equation",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The verification A @ x should reproduce b, up to small floating-point differences. Keep that check in your notebook or test: it catches shape mistakes and accidental elementwise multiplication.",
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Not every system has a unique solution",
+            text: "If the equations are inconsistent or redundant, solve may raise LinAlgError or return a least-squares result depending on the function. For this lesson, the matrices are chosen to have a unique solution.",
+          },
+        ],
+      },
+      {
+        id: "simulation",
+        title: "A small seeded simulation",
+        blocks: [
+          {
+            type: "text",
+            text: "Randomness is useful for simulating measurements. The example below draws one hundred readings from a normal distribution, then summarizes them with the same aggregations from the previous lesson.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nrng = np.random.default_rng(2026)\nreadings = rng.normal(loc=21.0, scale=1.5, size=100)\n\nprint(readings.mean())\nprint(readings.std())\nprint(readings[readings > 22].size)',
+            language: "python",
+            caption: "Simulate, then summarize",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Change the seed and the sample changes. Keep the seed fixed when you want a stable demonstration, and remove the fixed seed when you want a genuinely new sample each run.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "solve-system",
+        prompt:
+          "Solve A @ x = b for x using NumPy's linear algebra function. Keep x as a one-dimensional array.",
+        starterCode: `import numpy as np
+
+A = np.array([[2.0, 1.0], [1.0, 3.0]])
+b = np.array([5.0, 10.0])
+x = None`,
+        tests: [
+          {
+            name: "x is a NumPy array",
+            code: 'assert isinstance(x, np.ndarray), f"expected a NumPy array, got {type(x).__name__}"',
+          },
+          {
+            name: "x has one value per unknown",
+            code: 'assert x.shape == (2,), f"expected shape (2,), got {x.shape}"',
+          },
+          {
+            name: "the solution satisfies the system",
+            code: 'assert np.allclose(A @ x, b), f"A @ x is {A @ x}, expected {b}"',
+          },
+          {
+            name: "the solution matches the unique answer",
+            code: 'assert np.allclose(x, [1.0, 3.0]), f"expected [1. 3.], got {x}"',
+          },
+        ],
+        hints: [
+          "Use np.linalg.solve(A, b).",
+          "You do not need to invert A or compute it by hand.",
+          "After solving, A @ x should be close to b.",
+        ],
+        solution: `import numpy as np
+
+A = np.array([[2.0, 1.0], [1.0, 3.0]])
+b = np.array([5.0, 10.0])
+x = np.linalg.solve(A, b)
+
+print(x)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "matrix-product",
+        question: "What does A @ B compute?",
+        options: [
+          { id: "matrix", label: "The matrix product of A and B" },
+          { id: "elementwise", label: "The elementwise product of A and B" },
+          { id: "transpose", label: "The transpose of A times B" },
+        ],
+        answerId: "matrix",
+        explanation:
+          "The @ operator is matrix multiplication. The * operator is elementwise, so the two can produce very different results.",
+      },
+      {
+        id: "seed-reproducibility",
+        question: "Why do two default_rng(42) generators produce the same starting values?",
+        options: [
+          { id: "seed", label: "The seed initializes the same deterministic stream" },
+          { id: "global", label: "All generators share one global state" },
+          { id: "cache", label: "NumPy caches the last random array" },
+        ],
+        answerId: "seed",
+        explanation:
+          "A seed sets the generator's initial state. Reusing the seed recreates the same stream, which is useful for repeatable experiments.",
+      },
+      {
+        id: "product-shape",
+        question: "What is the shape of a (4, 2) matrix multiplied by a (2, 3) matrix?",
+        options: [
+          { id: "four-three", label: "(4, 3)" },
+          { id: "two-two", label: "(2, 2)" },
+          { id: "error", label: "A shape error" },
+        ],
+        answerId: "four-three",
+        explanation:
+          "The inner dimensions are both 2, so they match. The outer dimensions 4 and 3 become the result shape: (4, 3).",
+      },
+    ],
   },
 ];
