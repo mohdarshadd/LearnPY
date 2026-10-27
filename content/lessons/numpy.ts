@@ -270,5 +270,224 @@ print(fahrenheit)`,
           "axis=0 is the row axis. Summing over it collapses the rows and leaves one value for each column.",
       },
     ],
+    next: {
+      label: "Continue to broadcasting and aggregation",
+      href: "/learn/numpy/broadcasting",
+    },
+  },
+  {
+    id: "numpy-broadcasting",
+    library: "numpy",
+    slug: "broadcasting",
+    title: "Broadcasting and aggregation without loops",
+    summary:
+      "Combine arrays of different shapes, reduce values along an axis, and use keepdims to keep the dimensions you still need.",
+    minutes: 9,
+    level: "beginner",
+    packages: ["numpy"],
+    objectives: [
+      "Predict whether two array shapes can broadcast.",
+      "Add a row or column to a matrix without writing a loop.",
+      "Choose the right axis for sum, mean, and standard deviation.",
+      "Use keepdims to preserve a reduced axis for later arithmetic.",
+    ],
+    sections: [
+      {
+        id: "shape-rules",
+        title: "How broadcasting works",
+        blocks: [
+          {
+            type: "text",
+            text: "Broadcasting is NumPy's rule for combining arrays whose shapes differ. It compares shapes from right to left. A dimension of 1 can stretch to match the other side, and a missing leading dimension is treated as 1. If two dimensions are different and neither is 1, the operation fails.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nmatrix = np.array([[1, 2, 3], [4, 5, 6]])\nrow = np.array([10, 20, 30])\ncolumn = np.array([[100], [200]])\n\nprint(matrix + row)\nprint(matrix + column)',
+            language: "python",
+            caption: "A row and a column broadcast in different directions",
+            output: "[[11 22 33]\n [14 25 36]]\n[[101 102 103]\n [204 205 206]]",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The row has shape (3,), which aligns with the matrix's last axis. NumPy reuses that row for both rows of the matrix. The column has shape (2, 1): its single column stretches across all three columns. In both cases, the smaller array is not copied by hand; NumPy applies the values logically during the operation.",
+          },
+          {
+            type: "table",
+            caption: "Common shape combinations",
+            headers: ["Left shape", "Right shape", "Result", "Why"],
+            rows: [
+              ["(2, 3)", "(3,)", "(2, 3)", "Row repeats for each matrix row"],
+              ["(2, 3)", "(2, 1)", "(2, 3)", "Column repeats across columns"],
+              ["(2, 3)", "(1, 3)", "(2, 3)", "Leading 1 stretches to 2"],
+              ["(2, 3)", "(2,)", "error", "Rightmost 3 and 2 conflict"],
+            ],
+          },
+        ],
+      },
+      {
+        id: "aggregations",
+        title: "Aggregations and axes",
+        blocks: [
+          {
+            type: "text",
+            text: "Aggregations reduce an array to fewer values. Without an axis, a reduction collapses everything to one scalar. With an axis, it collapses only that axis and keeps the others. The axis you choose is the direction that disappears from the result.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nscores = np.array([[80, 90, 70], [60, 75, 85]])\n\nprint(scores.sum())\nprint(scores.mean(axis=0))\nprint(scores.mean(axis=1))\nprint(scores.std(axis=1))',
+            language: "python",
+            caption: "Totals, means, and variation along each axis",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "scores.sum() returns one number for the whole array.",
+              "scores.mean(axis=0) collapses rows and returns one mean per column.",
+              "scores.mean(axis=1) collapses columns and returns one mean per row.",
+              "scores.std(axis=1) returns the spread within each row.",
+            ],
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Name the axis out loud",
+            text: "For axis=1, say: move across each row and collapse the columns. For axis=0, say: move down each column and collapse the rows. The sentence and the result usually agree.",
+          },
+        ],
+      },
+      {
+        id: "keepdims",
+        title: "Keep the dimension you need",
+        blocks: [
+          {
+            type: "text",
+            text: "A reduction normally removes the collapsed axis. That is fine when you only need the summary, but it can break the next broadcast. keepdims=True leaves the reduced axis in place with length 1, which is exactly the shape broadcasting can stretch.",
+          },
+          {
+            type: "code",
+            code: 'import numpy as np\n\nscores = np.array([[80, 90, 70], [60, 75, 85]])\nrow_means = scores.mean(axis=1, keepdims=True)\ncentered = scores - row_means\n\nprint(row_means)\nprint(centered)\nprint(centered.mean(axis=1))',
+            language: "python",
+            caption: "Center each row on its own mean",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "row_means has shape (2, 1), so subtracting it from scores with shape (2, 3) broadcasts one mean down each row. Without keepdims, row_means would have shape (2,), which would try to align the 2 with the 3 columns and fail.",
+          },
+        ],
+      },
+      {
+        id: "common-mistakes",
+        title: "Where broadcasting goes wrong",
+        blocks: [
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "Adding a three-value array to a four-column matrix fails because 3 and 4 are neither equal nor 1.",
+              "Subtracting row means with shape (2,) from a (2, 3) matrix fails; use keepdims=True to get (2, 1).",
+              "Passing the wrong axis can give a correct-looking result with the wrong meaning, so check the result shape.",
+              "In-place operations such as arr += row change the original array; make a copy first if other code still needs it.",
+            ],
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Broadcasting does not guess intent",
+            text: "If two shapes conflict, NumPy raises an error instead of choosing a direction. Reshape one side explicitly when you know which axis you meant.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "center-rows",
+        prompt:
+          "Subtract each row's mean from that row. Keep the result in an array with the same shape as scores.",
+        starterCode: `import numpy as np
+
+scores = np.array([
+    [80, 90, 70, 85],
+    [60, 75, 85, 70],
+    [95, 88, 92, 90],
+])
+centered = None`,
+        tests: [
+          {
+            name: "centered is a NumPy array",
+            code: 'assert isinstance(centered, np.ndarray), f"expected a NumPy array, got {type(centered).__name__}"',
+          },
+          {
+            name: "the shape matches scores",
+            code: 'assert centered.shape == scores.shape, f"expected {scores.shape}, got {centered.shape}"',
+          },
+          {
+            name: "every row now has mean zero",
+            code: 'row_means = centered.mean(axis=1)\nassert np.allclose(row_means, 0), f"row means are {row_means}"',
+          },
+          {
+            name: "the values match row-wise centering",
+            code: 'expected = scores - scores.mean(axis=1, keepdims=True)\nassert np.allclose(centered, expected), "the centered values do not match"',
+          },
+        ],
+        hints: [
+          "Compute the row means with axis=1.",
+          "Pass keepdims=True so the means have shape (3, 1), not (3,).",
+          "Subtract the means from scores with one array expression.",
+        ],
+        solution: `import numpy as np
+
+scores = np.array([
+    [80, 90, 70, 85],
+    [60, 75, 85, 70],
+    [95, 88, 92, 90],
+])
+centered = scores - scores.mean(axis=1, keepdims=True)
+
+print(centered)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "broadcast-shapes",
+        question: "What is the shape of np.ones((3, 1)) + np.ones((1, 4))?",
+        options: [
+          { id: "three-four", label: "(3, 4)" },
+          { id: "four-three", label: "(4, 3)" },
+          { id: "error", label: "A broadcasting error" },
+        ],
+        answerId: "three-four",
+        explanation:
+          "The 1 in each shape stretches to the other side: 3 stays 3 and 1 becomes 4 in the first dimension, while 1 becomes 3 and 4 stays 4 in the second. The result is (3, 4).",
+      },
+      {
+        id: "axis-one-mean",
+        question: "What does matrix.mean(axis=1) return for a 2D matrix?",
+        options: [
+          { id: "rows", label: "One mean per row" },
+          { id: "columns", label: "One mean per column" },
+          { id: "scalar", label: "One mean for the whole matrix" },
+        ],
+        answerId: "rows",
+        explanation:
+          "axis=1 is the column direction within each row. Collapsing it leaves one value per row.",
+      },
+      {
+        id: "keepdims-purpose",
+        question: "Why use keepdims=True on a row-mean reduction?",
+        options: [
+          { id: "shape", label: "It preserves the reduced axis as length 1, so the result can broadcast back" },
+          { id: "precision", label: "It increases floating-point precision" },
+          { id: "sort", label: "It sorts the rows before reducing" },
+        ],
+        answerId: "shape",
+        explanation:
+          "keepdims keeps the axis in the result with length 1. A (3, 1) mean can broadcast across a (3, 4) matrix; a (3,) mean cannot.",
+      },
+    ],
   },
 ];
