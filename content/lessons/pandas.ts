@@ -664,5 +664,672 @@ print(result)`,
           "Intermediate boolean selection can return a copy. Assign through one clear indexing operation, or update the original frame deliberately.",
       },
     ],
+    next: {
+      label: "Group rows and summarize",
+      href: "/learn/pandas/grouping",
+    },
+  },
+  {
+    id: "pandas-groupby",
+    library: "pandas",
+    slug: "grouping",
+    title: "Group rows and summarize",
+    summary:
+      "Split a table into groups, aggregate each one, and use transform when the group total needs to travel back to every row.",
+    minutes: 11,
+    level: "beginner",
+    packages: ["pandas"],
+    objectives: [
+      "Explain the split-apply-combine model.",
+      "Aggregate one or more columns with groupby.",
+      "Name output columns with agg.",
+      "Use transform to create group-level values on every row.",
+      "Count rows without accidentally skipping missing values.",
+    ],
+    sections: [
+      {
+        id: "split-apply-combine",
+        title: "Split, apply, combine",
+        blocks: [
+          {
+            type: "text",
+            text: "Grouping answers questions such as \"what was revenue by region?\" The grouping column defines the groups. pandas splits the rows by that value, applies an aggregation to each group, and combines the one-row-per-group results into a new Series or DataFrame.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "product": ["A", "B", "A", "A", "B", "B"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+print(sales.groupby("region")["revenue"].sum())`,
+            language: "python",
+            caption: "One total per region",
+            output: `region
+North    160.0
+South     96.0
+West      97.5
+Name: revenue, dtype: float64`,
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: true,
+            items: [
+              "Split: rows are assigned to a group by the region value.",
+              "Apply: the sum of revenue is computed inside each group.",
+              "Combine: the per-group totals are assembled into a Series indexed by region.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "named-aggregates",
+        title: "Name your aggregates",
+        blocks: [
+          {
+            type: "text",
+            text: "A single aggregation can return a Series, but an analysis usually needs several columns at once. The named aggregation form gives each output a clear name and avoids multi-level column labels.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+summary = sales.groupby("region", as_index=False).agg(
+    total_units=("units", "sum"),
+    total_revenue=("revenue", "sum"),
+)
+print(summary)`,
+            language: "python",
+            caption: "Named output columns",
+            output: `  region  total_units  total_revenue
+0  North           32          160.0
+1  South           12           96.0
+2   West           15           97.5`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Set as_index=False when you want the grouping key to remain an ordinary column. With the default as_index=True, region becomes the index of the summary instead.",
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Read the aggregation as a sentence",
+            text: "total_revenue=(\"revenue\", \"sum\") means \"create a column named total_revenue by summing the revenue column.\" The tuple pairs the source column with the operation.",
+          },
+        ],
+      },
+      {
+        id: "multiple-keys",
+        title: "Group by more than one key",
+        blocks: [
+          {
+            type: "text",
+            text: "Passing a list of column names groups by the combination of those values. Each key becomes a level of a MultiIndex, so the resulting rows represent region-product pairs rather than regions alone.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "product": ["A", "B", "A", "A", "B", "B"],
+    "units": [12, 7, 9, 15, 5, 11],
+})
+
+print(sales.groupby(["region", "product"])["units"].sum())`,
+            language: "python",
+            caption: "Two keys produce a MultiIndex",
+            output: `region  product
+North   A          21
+        B          11
+South   B          12
+West    A          15
+Name: units, dtype: int64`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Use reset_index when a downstream step expects ordinary columns, or keep the MultiIndex when you want the hierarchy to remain visible in the result.",
+          },
+        ],
+      },
+      {
+        id: "transform",
+        title: "Use transform for group-level values",
+        blocks: [
+          {
+            type: "text",
+            text: "Aggregation returns one row per group. transform returns one value per original row, which is what you need when a group total should sit beside each row for comparison or for a share-of-total calculation.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+sales["region_revenue"] = sales.groupby("region")["revenue"].transform("sum")
+sales["share"] = sales["revenue"] / sales["region_revenue"]
+print(sales[["region", "revenue", "region_revenue", "share"]])`,
+            language: "python",
+            caption: "A group total repeated on every row",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Same length, different meaning",
+            text: "After transform, the result has the same index as the original frame, so it can be assigned directly as a new column. Aggregation would have produced only one row per region.",
+          },
+        ],
+      },
+      {
+        id: "count-versus-size",
+        title: "Count rows, not just values",
+        blocks: [
+          {
+            type: "text",
+            text: "count counts non-missing values in each group. size counts rows, including rows with missing values. If a column can contain NaN, the two answers can differ, and the difference is often the information you need.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "North", "South"],
+    "price": [5.0, None, 8.0],
+})
+
+print(sales.groupby("region").size())
+print(sales.groupby("region")["price"].count())`,
+            language: "python",
+            caption: "Rows versus non-missing prices",
+            output: `region
+North    2
+South    1
+dtype: int64
+region
+North    1
+South    1
+Name: price, dtype: int64`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The North group has two rows but only one observed price. Use size for row counts and count for observed values, then be explicit about which one the question is asking for.",
+          },
+        ],
+      },
+      {
+        id: "grouping-recipe",
+        title: "A grouping recipe",
+        blocks: [
+          {
+            type: "text",
+            text: "For most reports: choose the grouping keys, choose the measurements, name the aggregations, and sort the final summary. Keeping those decisions separate makes the result easy to check against the raw rows.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+summary = (
+    sales.groupby("region", as_index=False)
+    .agg(total_units=("units", "sum"), total_revenue=("revenue", "sum"))
+    .sort_values("total_revenue", ascending=False)
+)
+print(summary)`,
+            language: "python",
+            caption: "Group, name, and order",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The next lesson joins rows from different tables. Grouping combines rows that already share a key; merging brings in columns that live in another frame.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "regional-summary",
+        prompt:
+          "Group sales by region and create summary with the columns total_units and total_revenue. Sort the rows by total_revenue from highest to lowest.",
+        starterCode: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+# Build the sorted summary.
+summary = None`,
+        tests: [
+          {
+            name: "summary is a DataFrame",
+            code: 'assert isinstance(summary, pd.DataFrame), f"expected a DataFrame, got {type(summary).__name__}"',
+          },
+          {
+            name: "the columns are named clearly",
+            code: 'assert list(summary.columns) == ["region", "total_units", "total_revenue"], f"expected named columns, got {list(summary.columns)}"',
+          },
+          {
+            name: "the rows and totals are correct",
+            code: `expected = sales.groupby("region", as_index=False).agg(total_units=("units", "sum"), total_revenue=("revenue", "sum")).sort_values("total_revenue", ascending=False)
+assert summary.reset_index(drop=True).equals(expected.reset_index(drop=True)), f"expected\\n{expected}\\ngot\\n{summary}"`,
+          },
+        ],
+        hints: [
+          "Use groupby with as_index=False so region stays a column.",
+          "Use named aggregations for total_units and total_revenue, then sort by total_revenue.",
+        ],
+        solution: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "South", "North", "West", "South", "North"],
+    "units": [12, 7, 9, 15, 5, 11],
+    "price": [5.0, 8.0, 5.0, 6.5, 8.0, 5.0],
+})
+sales["revenue"] = sales["units"] * sales["price"]
+
+summary = (
+    sales.groupby("region", as_index=False)
+    .agg(total_units=("units", "sum"), total_revenue=("revenue", "sum"))
+    .sort_values("total_revenue", ascending=False)
+)
+print(summary)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "split-apply-combine",
+        question: "What are the three stages of a groupby operation?",
+        options: [
+          { id: "split", label: "Split, apply, combine" },
+          { id: "sort", label: "Sort, filter, join" },
+          { id: "read", label: "Read, write, reset" },
+        ],
+        answerId: "split",
+        explanation:
+          "groupby splits rows by key, applies the aggregation to each group, then combines the per-group results.",
+      },
+      {
+        id: "size-count",
+        question: "Which grouping result counts rows even when a value is missing?",
+        options: [
+          { id: "count", label: "count" },
+          { id: "size", label: "size" },
+          { id: "sum", label: "sum" },
+        ],
+        answerId: "size",
+        explanation:
+          "size counts rows in each group. count counts non-missing values, so it can be smaller.",
+      },
+      {
+        id: "transform-length",
+        question: "What shape does a groupby transform return?",
+        options: [
+          { id: "group", label: "One row per group" },
+          { id: "rows", label: "The same number of rows as the original frame" },
+          { id: "columns", label: "One column per group" },
+        ],
+        answerId: "rows",
+        explanation:
+          "transform broadcasts the group result back to the original rows, which is why it can be assigned as a new column.",
+      },
+    ],
+    next: {
+      label: "Join related tables",
+      href: "/learn/pandas/joins",
+    },
+  },
+  {
+    id: "pandas-joins",
+    library: "pandas",
+    slug: "joins",
+    title: "Join related tables without losing rows",
+    summary:
+      "Merge DataFrames on a shared key, choose how unmatched rows survive, validate the relationship, and stack tables with concat.",
+    minutes: 11,
+    level: "beginner",
+    packages: ["pandas"],
+    objectives: [
+      "Merge two frames on a shared key.",
+      "Choose the join direction that keeps the rows you need.",
+      "Validate a many-to-one relationship.",
+      "Use the merge indicator to inspect unmatched rows.",
+      "Stack rows with concat when no key is involved.",
+    ],
+    sections: [
+      {
+        id: "why-merge",
+        title: "Why tables need each other",
+        blocks: [
+          {
+            type: "text",
+            text: "Real data is usually split across tables. Orders know customer_id but not the customer's name; a customer table knows the name but not the orders. A merge brings both sets of columns together using the shared key.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+print(orders.merge(customers, on="customer_id", how="left"))`,
+            language: "python",
+            caption: "A left merge keeps every order",
+            output: `   order_id  customer_id  total   name
+0        10            1   25.0    Ada
+1        11            1   40.0    Ada
+2        12            2   15.0  Grace
+3        13            4   99.0    NaN`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Order 13 points at customer 4, which is not in customers. The left join keeps the order and fills the missing name with NaN. That missing value is a finding, not a formatting problem.",
+          },
+        ],
+      },
+      {
+        id: "join-direction",
+        title: "Choose how rows survive",
+        blocks: [
+          {
+            type: "text",
+            text: "The how argument decides which unmatched rows survive. An inner join keeps only matches, a left join keeps every row from the left frame, a right join keeps every row from the right frame, and an outer join keeps both sides.",
+          },
+          {
+            type: "table",
+            caption: "Merge directions",
+            headers: ["how", "Keeps"],
+            rows: [
+              ["inner", "Rows with a matching key on both sides"],
+              ["left", "Every row from the left frame, plus matches from the right"],
+              ["right", "Every row from the right frame, plus matches from the left"],
+              ["outer", "All rows from both frames"],
+            ],
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+print(orders.merge(customers, on="customer_id", how="inner"))`,
+            language: "python",
+            caption: "An inner join drops the unmatched order",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "A join can duplicate rows",
+            text: "If the right frame has two rows for one key, a left join produces two output rows for every matching left row. Row counts are part of the result, so check them deliberately.",
+          },
+        ],
+      },
+      {
+        id: "validate",
+        title: "Validate the relationship",
+        blocks: [
+          {
+            type: "text",
+            text: "Merge accepts a validate argument that fails when the actual key relationship is not the one you expected. This turns a silent row explosion into a clear error.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+merged = orders.merge(
+    customers,
+    on="customer_id",
+    how="left",
+    validate="many_to_one",
+    indicator=True,
+)
+print(merged[["order_id", "name", "_merge"]])`,
+            language: "python",
+            caption: "Assert the relationship and expose unmatched rows",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "many_to_one means many orders may share one customer, but each customer key is unique.",
+              "one_to_one requires uniqueness on both sides.",
+              "one_to_many is the reverse of many_to_one.",
+              "indicator=True adds a _merge column that says both, left_only, or right_only.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "concat",
+        title: "Stack tables with concat",
+        blocks: [
+          {
+            type: "text",
+            text: "Use concat when the tables already have the same columns and you simply need more rows. It does not look for a key. Use merge when the tables need to be aligned on a shared key.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+q1 = pd.DataFrame({"region": ["North", "South"], "revenue": [100, 80]})
+q2 = pd.DataFrame({"region": ["West"], "revenue": [95]})
+
+combined = pd.concat([q1, q2], ignore_index=True)
+print(combined)`,
+            language: "python",
+            caption: "Stack two frames and renumber the rows",
+            output: `  region  revenue
+0  North      100
+1  South       80
+2   West       95`,
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "ignore_index gives you a clean row axis",
+            text: "Without ignore_index, concat keeps the original row labels and you can get duplicate labels. That is sometimes useful, but a fresh RangeIndex is easier to reason about for a combined table.",
+          },
+        ],
+      },
+      {
+        id: "join-recipe",
+        title: "A join worth trusting",
+        blocks: [
+          {
+            type: "text",
+            text: "Before joining: identify the key and its expected relationship. After joining: compare row counts, inspect unmatched rows, and decide how missing values should be represented. The merge itself is the easy part.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+merged = orders.merge(
+    customers,
+    on="customer_id",
+    how="left",
+    validate="many_to_one",
+    indicator=True,
+)
+print(merged["_merge"].value_counts())`,
+            language: "python",
+            caption: "Count matches and misses",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "value_counts on the merge indicator is a quick audit: every left_only row is an order whose customer is missing. The next lesson cleans missing values and restructures the table for analysis.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "orders-with-names",
+        prompt:
+          "Left-merge orders with customers on customer_id so every order survives. Assign the result to merged, then replace missing names with \"Unknown\".",
+        starterCode: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+# Merge, then fill missing names.
+merged = None`,
+        tests: [
+          {
+            name: "merged is a DataFrame",
+            code: 'assert isinstance(merged, pd.DataFrame), f"expected a DataFrame, got {type(merged).__name__}"',
+          },
+          {
+            name: "every order survives",
+            code: 'assert len(merged) == 4, f"expected 4 rows, got {len(merged)}"',
+          },
+          {
+            name: "missing names are labeled",
+            code: 'row = merged.loc[merged["order_id"] == 13]\nassert not row.empty, "order 13 is missing"\nassert row["name"].iloc[0] == "Unknown", f"expected Unknown, got {row[\'name\'].iloc[0]}"',
+          },
+          {
+            name: "the merge values are correct",
+            code: `expected = orders.merge(customers, on="customer_id", how="left")
+expected["name"] = expected["name"].fillna("Unknown")
+assert merged.reset_index(drop=True).equals(expected.reset_index(drop=True)), f"expected\\n{expected}\\ngot\\n{merged}"`,
+          },
+        ],
+        hints: [
+          "Use orders.merge(customers, on=\"customer_id\", how=\"left\").",
+          "Assign merged[\"name\"] = merged[\"name\"].fillna(\"Unknown\").",
+        ],
+        solution: `import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3],
+    "name": ["Ada", "Grace", "Alan"],
+})
+orders = pd.DataFrame({
+    "order_id": [10, 11, 12, 13],
+    "customer_id": [1, 1, 2, 4],
+    "total": [25.0, 40.0, 15.0, 99.0],
+})
+
+merged = orders.merge(customers, on="customer_id", how="left")
+merged["name"] = merged["name"].fillna("Unknown")
+print(merged)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "left-join",
+        question: "Which join keeps every row from the left frame?",
+        options: [
+          { id: "inner", label: "inner" },
+          { id: "left", label: "left" },
+          { id: "right", label: "right" },
+        ],
+        answerId: "left",
+        explanation:
+          "A left join keeps the left rows even when no matching key exists on the right. Missing right-side values are filled with NaN.",
+      },
+      {
+        id: "validate-relationship",
+        question: "Orders may share customer_id, but each customer_id is unique in customers. Which validation is correct?",
+        options: [
+          { id: "one", label: "one_to_one" },
+          { id: "many", label: "many_to_one" },
+          { id: "none", label: "No validation is possible" },
+        ],
+        answerId: "many",
+        explanation:
+          "Many orders can map to one customer, so validate=\"many_to_one\" describes the relationship from the orders side.",
+      },
+      {
+        id: "concat-versus-merge",
+        question: "When should you use concat instead of merge?",
+        options: [
+          { id: "rows", label: "When both tables have the same columns and you need more rows" },
+          { id: "key", label: "When you need to match rows on a shared key" },
+          { id: "sort", label: "When you only want to sort a table" },
+        ],
+        answerId: "rows",
+        explanation:
+          "concat stacks compatible tables. merge aligns columns by a key and is the right tool for joining related data.",
+      },
+    ],
   },
 ];
