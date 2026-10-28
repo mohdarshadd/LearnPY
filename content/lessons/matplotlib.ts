@@ -752,5 +752,605 @@ ax.grid(True, axis="y", alpha=0.3)`,
           "A reference line helps readers locate the mean relative to the full distribution, but it does not explain causes.",
       },
     ],
+    next: {
+      label: "Lay out multiple charts",
+      href: "/learn/matplotlib/subplots",
+    },
+  },
+  {
+    id: "matplotlib-subplots",
+    library: "matplotlib",
+    slug: "subplots",
+    title: "Lay out multiple charts",
+    summary:
+      "Compose a figure from several axes, share scales where comparison needs them, and use layout engines to keep labels from colliding.",
+    minutes: 11,
+    level: "beginner",
+    packages: ["matplotlib", "numpy"],
+    objectives: [
+      "Create a row or grid of axes in one figure.",
+      "Index a single axes and loop over a two-dimensional grid.",
+      "Share axes so comparison uses the same scale.",
+      "Use constrained layout or tight_layout deliberately.",
+      "Build an uneven layout with GridSpec.",
+    ],
+    sections: [
+      {
+        id: "many-axes",
+        title: "One figure, many axes",
+        blocks: [
+          {
+            type: "text",
+            text: "A figure can hold several axes. Each axes has its own data, title, and limits, while the figure owns the overall size and background. This is how you place related charts side by side without opening separate windows.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+import numpy as np
+
+weeks = np.arange(1, 7)
+north = np.array([12, 15, 14, 18, 20, 23])
+south = np.array([9, 13, 14, 16, 19, 21])
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
+axes[0].plot(weeks, north, marker="o")
+axes[0].set_title("North")
+axes[0].set_xlabel("Week")
+axes[0].set_ylabel("Signups")
+
+axes[1].plot(weeks, south, marker="o")
+axes[1].set_title("South")
+axes[1].set_xlabel("Week")
+
+fig.suptitle("Weekly signups by region")
+fig.tight_layout()`,
+            language: "python",
+            caption: "Two axes in one figure",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "sharey=True gives both panels the same y scale. Without it, Matplotlib can choose different limits for each panel, which makes a visual comparison misleading.",
+          },
+        ],
+      },
+      {
+        id: "axes-arrays",
+        title: "Know the shape of axes",
+        blocks: [
+          {
+            type: "text",
+            text: "plt.subplots(1, 2) returns a one-dimensional array with two axes. plt.subplots(2, 2) returns a two-dimensional array. Always check the shape before indexing so a row does not accidentally receive the wrong chart.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(2, 2, figsize=(9, 6), sharex=True)
+series = {
+    "A": [1, 2, 3, 4],
+    "B": [4, 3, 2, 1],
+    "C": [2, 4, 3, 5],
+    "D": [5, 3, 4, 2],
+}
+
+for ax, (label, values) in zip(axes.flat, series.items()):
+    ax.plot(values, marker="o")
+    ax.set_title(label)
+
+fig.suptitle("Four small multiples")
+fig.tight_layout()`,
+            language: "python",
+            caption: "Flatten a grid when every panel is treated the same",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "axes.flat is a convenient iterator",
+            text: "For a uniform grid, axes.flat yields every axes in reading order. For an uneven layout, keep the explicit indices so the placement stays clear.",
+          },
+        ],
+      },
+      {
+        id: "layout-engines",
+        title: "Give labels room",
+        blocks: [
+          {
+            type: "text",
+            text: "Titles, tick labels, and axis labels can overlap when several axes share a figure. Layout engines adjust the axes rectangles after the artists exist. Use layout=\"constrained\" when creating the figure, or call fig.tight_layout() near the end.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+months = ["Jan", "Feb", "Mar", "Apr"]
+north = [12, 15, 11, 18]
+south = [9, 13, 14, 16]
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
+axes[0].bar(months, north, color="#2563eb")
+axes[0].set_title("North signups")
+axes[0].set_ylabel("Signups")
+axes[1].bar(months, south, color="#0f766e")
+axes[1].set_title("South signups")
+axes[1].set_ylabel("Signups")
+fig.suptitle("Monthly signups by region")`,
+            language: "python",
+            caption: "Constrained layout reserves space for labels",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Do not stack layout engines",
+            text: "Constrained layout and tight_layout solve the same problem in different ways. Pick one; calling both can produce warnings or surprising spacing.",
+          },
+        ],
+      },
+      {
+        id: "gridspec",
+        title: "Build an uneven layout",
+        blocks: [
+          {
+            type: "text",
+            text: "Use GridSpec when panels should not all have the same width or height. width_ratios and height_ratios control the proportions, and add_subplot places each axes into a cell.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+import numpy as np
+
+months = np.arange(1, 7)
+signups = np.array([120, 135, 128, 160, 175, 190])
+spend = np.array([40, 45, 42, 55, 58, 65])
+
+fig = plt.figure(figsize=(10, 4), layout="constrained")
+grid = fig.add_gridspec(2, 2, width_ratios=[2, 1])
+
+main = fig.add_subplot(grid[:, 0])
+side = fig.add_subplot(grid[0, 1])
+summary = fig.add_subplot(grid[1, 1])
+
+main.plot(months, signups, marker="o")
+main.set_title("Signups")
+main.set_xlabel("Month")
+
+side.bar(months, spend)
+side.set_title("Spend")
+
+summary.axis("off")
+summary.text(0.5, 0.5, "Q2 review", ha="center", va="center")`,
+            language: "python",
+            caption: "A wide main panel with two small summaries",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "grid[:, 0] spans both rows in the left column.",
+              "grid[0, 1] is the upper-right cell.",
+              "grid[1, 1] is the lower-right cell.",
+              "summary.axis(\"off\") removes ticks and spines for a text-only panel.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "layout-checklist",
+        title: "A layout checklist",
+        blocks: [
+          {
+            type: "text",
+            text: "A good multi-panel figure has a clear reading order, shared scales where comparison depends on them, and enough space for every label. Check those three things before adding more decoration.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True, layout="constrained")
+axes[0].plot([1, 2, 3], [2, 4, 3], marker="o")
+axes[0].set_title("Before")
+axes[1].plot([1, 2, 3], [3, 5, 6], marker="o")
+axes[1].set_title("After")
+fig.suptitle("A before-and-after comparison")
+
+for ax in axes:
+    ax.set_xlabel("Week")
+axes[0].set_ylabel("Score")
+assert len(axes) == 2
+assert axes[0].get_ylim() == axes[1].get_ylim()`,
+            language: "python",
+            caption: "Compare panels on one scale",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The next lesson adds the visual layer: a restrained palette, direct annotation, and style choices that survive grayscale and color-vision differences.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "two-panel-compare",
+        prompt:
+          "Create a 1x2 figure with shared y axes and figsize (10, 4). Plot north on the left and south on the right, both with markers. Title the panels \"North\" and \"South\", label each x-axis \"Week\", label the left y-axis \"Signups\", and add the figure title \"Weekly signups by region\".",
+        starterCode: `import matplotlib.pyplot as plt
+import numpy as np
+
+weeks = np.arange(1, 7)
+north = np.array([12, 15, 14, 18, 20, 23])
+south = np.array([9, 13, 14, 16, 19, 21])
+
+# Build a two-panel comparison.
+fig, axes = None, None`,
+        tests: [
+          {
+            name: "there are two axes with the same y scale",
+            code: 'assert isinstance(axes, np.ndarray), f"expected an array of axes, got {type(axes).__name__}"\nassert len(axes) == 2, f"expected 2 axes, got {len(axes)}"\nassert axes[0].get_ylim() == axes[1].get_ylim(), "the y scales differ"',
+          },
+          {
+            name: "each panel has the right series",
+            code: 'left = axes[0].get_lines()\nright = axes[1].get_lines()\nassert len(left) == 1 and len(right) == 1\nassert list(left[0].get_ydata()) == list(north)\nassert list(right[0].get_ydata()) == list(south)\nassert left[0].get_marker() == "o"\nassert right[0].get_marker() == "o"',
+          },
+          {
+            name: "the panel and figure labels are set",
+            code: 'assert axes[0].get_title() == "North"\nassert axes[1].get_title() == "South"\nassert axes[0].get_xlabel() == "Week"\nassert axes[1].get_xlabel() == "Week"\nassert axes[0].get_ylabel() == "Signups"\nassert fig.get_suptitle() == "Weekly signups by region"',
+          },
+        ],
+        hints: [
+          "Use plt.subplots(1, 2, figsize=(10, 4), sharey=True).",
+          "Set the overall title with fig.suptitle(...), not on either panel.",
+        ],
+        solution: `import matplotlib.pyplot as plt
+import numpy as np
+
+weeks = np.arange(1, 7)
+north = np.array([12, 15, 14, 18, 20, 23])
+south = np.array([9, 13, 14, 16, 19, 21])
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
+axes[0].plot(weeks, north, marker="o")
+axes[0].set_title("North")
+axes[0].set_xlabel("Week")
+axes[0].set_ylabel("Signups")
+
+axes[1].plot(weeks, south, marker="o")
+axes[1].set_title("South")
+axes[1].set_xlabel("Week")
+
+fig.suptitle("Weekly signups by region")`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "sharey",
+        question: "Why use sharey=True for comparison panels?",
+        options: [
+          { id: "same", label: "It gives both panels the same y scale" },
+          { id: "remove", label: "It removes the y-axis from both panels" },
+          { id: "colors", label: "It assigns matching colors" },
+        ],
+        answerId: "same",
+        explanation:
+          "A shared y scale keeps bar heights and line positions comparable across panels.",
+      },
+      {
+        id: "layout-constrained",
+        question: "When should constrained layout be selected?",
+        options: [
+          { id: "create", label: "When creating the figure, with layout=\"constrained\"" },
+          { id: "never", label: "Never; it only works with one axes" },
+          { id: "after", label: "After saving the figure" },
+        ],
+        answerId: "create",
+        explanation:
+          "layout=\"constrained\" is a figure-level setting applied as the figure is created. It then recalculates spacing around the artists.",
+      },
+      {
+        id: "gridspec",
+        question: "What does width_ratios=[2, 1] do in GridSpec?",
+        options: [
+          { id: "ratio", label: "Makes the first column about twice as wide as the second" },
+          { id: "rows", label: "Creates two rows instead of columns" },
+          { id: "height", label: "Sets the figure height to two inches" },
+        ],
+        answerId: "ratio",
+        explanation:
+          "width_ratios controls the relative widths of the grid columns.",
+      },
+    ],
+    next: {
+      label: "Style and annotate the message",
+      href: "/learn/matplotlib/style",
+    },
+  },
+  {
+    id: "matplotlib-style",
+    library: "matplotlib",
+    slug: "style",
+    title: "Style and annotate the message",
+    summary:
+      "Choose color with purpose, remove visual noise, annotate the important point, and keep the chart readable without color.",
+    minutes: 11,
+    level: "beginner",
+    packages: ["matplotlib", "numpy"],
+    objectives: [
+      "Use a restrained palette with enough contrast.",
+      "Remove spines and grid lines that do not help comparison.",
+      "Annotate a specific data point directly.",
+      "Reuse a Matplotlib style safely.",
+      "Keep labels and markers meaningful in grayscale.",
+    ],
+    sections: [
+      {
+        id: "visual-hierarchy",
+        title: "Decide what the eye should see",
+        blocks: [
+          {
+            type: "text",
+            text: "Styling is not decoration. Every line, grid, spine, and label competes for attention. Keep the data prominent, make labels easy to read, and remove chart furniture that does not help the comparison.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+signups = [120, 135, 128, 160, 175, 190]
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(months, signups, color="#2563eb", marker="o", linewidth=2)
+ax.set_title("Monthly signups")
+ax.set_xlabel("Month")
+ax.set_ylabel("Signups")
+ax.grid(True, axis="y", alpha=0.25)
+
+for side in ["top", "right"]:
+    ax.spines[side].set_visible(False)`,
+            language: "python",
+            caption: "A quieter frame around the data",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Remove before adding",
+            text: "If a chart feels busy, first remove the top and right spines, simplify the grid, and cut redundant labels. Adding more styling rarely fixes clutter.",
+          },
+        ],
+      },
+      {
+        id: "color",
+        title: "Use color with purpose",
+        blocks: [
+          {
+            type: "text",
+            text: "Color can separate series, encode a category, or highlight one observation. It should not be the only difference between series. Pair hue with markers, line styles, or direct labels so the chart still works in grayscale.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+months = ["Jan", "Feb", "Mar", "Apr"]
+north = [12, 15, 11, 18]
+south = [9, 13, 14, 16]
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(months, north, color="#2563eb", marker="o", linewidth=2, label="North")
+ax.plot(months, south, color="#0f766e", marker="s", linewidth=2, label="South")
+ax.set_title("Monthly signups by region")
+ax.set_ylabel("Signups")
+ax.legend()
+for side in ["top", "right"]:
+    ax.spines[side].set_visible(False)`,
+            language: "python",
+            caption: "Distinct colors and distinct markers",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Avoid red-green as the only contrast",
+            text: "Red and green can be difficult to distinguish with common color-vision differences. Use different lightness levels, line styles, or markers as well.",
+          },
+        ],
+      },
+      {
+        id: "annotation",
+        title: "Annotate the point that matters",
+        blocks: [
+          {
+            type: "text",
+            text: "A direct annotation explains an unusual point where it appears. ax.annotate connects text at xytext to a data coordinate at xy. Use it for a peak, a gap, or a threshold rather than making the reader hunt through the caption.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+import numpy as np
+
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+signups = np.array([120, 135, 128, 160, 175, 190])
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(months, signups, color="#2563eb", marker="o", linewidth=2)
+
+peak = int(np.argmax(signups))
+ax.annotate(
+    f"Peak: {signups[peak]}",
+    xy=(peak, signups[peak]),
+    xytext=(peak - 0.8, signups[peak] + 15),
+    arrowprops={"arrowstyle": "->", "color": "#334155"},
+)
+ax.set_title("Monthly signups")
+ax.set_ylabel("Signups")
+for side in ["top", "right"]:
+    ax.spines[side].set_visible(False)`,
+            language: "python",
+            caption: "A label connected to the data",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Annotation coordinates are in data units for both xy and xytext by default. If the text lands off the axes, adjust the offset or use axes-fraction coordinates deliberately.",
+          },
+        ],
+      },
+      {
+        id: "style-context",
+        title: "Reuse a style without surprises",
+        blocks: [
+          {
+            type: "text",
+            text: "Matplotlib ships with named styles. plt.style.use changes the active settings globally; plt.style.context applies a style only inside a block. The context manager is safer when one figure needs a different visual system.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+months = ["Jan", "Feb", "Mar", "Apr"]
+north = [12, 15, 11, 18]
+
+with plt.style.context("seaborn-v0_8-whitegrid"):
+    fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+    ax.plot(months, north, color="#2563eb", marker="o", linewidth=2)
+    ax.set_title("Monthly signups")
+    ax.set_ylabel("Signups")`,
+            language: "python",
+            caption: "Apply a style to one figure",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "A style changes defaults, not your data. Still provide titles, units, and legends; a theme cannot supply the meaning of the chart.",
+          },
+        ],
+      },
+      {
+        id: "export",
+        title: "Export a chart worth keeping",
+        blocks: [
+          {
+            type: "text",
+            text: "Use savefig with a vector format such as PDF or SVG for reports, or PNG at a deliberate DPI for the web. bbox_inches=\"tight\" removes excess whitespace. In this runner, open figures are captured automatically.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+
+months = ["Jan", "Feb", "Mar", "Apr"]
+signups = [120, 135, 128, 160]
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(months, signups, color="#2563eb", marker="o", linewidth=2)
+ax.set_title("Monthly signups")
+ax.set_ylabel("Signups")`,
+            language: "python",
+            caption: "The figure captured by this runner",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "A saved figure is a publication surface",
+            text: "Check the title, units, legend, and spelling after the export. A PNG can travel without its surrounding article, so it has to stand on its own.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "annotated-line",
+        prompt:
+          "Plot signups with color \"#2563eb\", marker \"o\", and line width 2. Add an annotation containing the word \"Peak\" at the maximum value. Set the title to \"Monthly signups\" and hide the top and right spines.",
+        starterCode: `import matplotlib.pyplot as plt
+import numpy as np
+
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+signups = np.array([120, 135, 128, 160, 175, 190])
+
+# Style the line and annotate the peak.
+fig, ax = None, None`,
+        tests: [
+          {
+            name: "the styled line is present",
+            code: 'assert isinstance(ax, plt.Axes), f"expected an Axes, got {type(ax).__name__}"\nlines = ax.get_lines()\nassert len(lines) == 1, f"expected one line, got {len(lines)}"\nassert lines[0].get_color() == "#2563eb", lines[0].get_color()\nassert lines[0].get_marker() == "o"\nassert lines[0].get_linewidth() == 2',
+          },
+          {
+            name: "the peak is annotated",
+            code: 'assert len(ax.texts) >= 1, "no annotation was added"\nassert any("Peak" in text.get_text() for text in ax.texts), [text.get_text() for text in ax.texts]',
+          },
+          {
+            name: "the frame is simplified",
+            code: 'assert ax.get_title() == "Monthly signups", f"title: {ax.get_title()}"\nassert not ax.spines["top"].get_visible(), "top spine is visible"\nassert not ax.spines["right"].get_visible(), "right spine is visible"',
+          },
+        ],
+        hints: [
+          "Use ax.plot(months, signups, color=\"#2563eb\", marker=\"o\", linewidth=2).",
+          "Find the peak with int(np.argmax(signups)), then call ax.annotate with xy=(peak, signups[peak]).",
+        ],
+        solution: `import matplotlib.pyplot as plt
+import numpy as np
+
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+signups = np.array([120, 135, 128, 160, 175, 190])
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(months, signups, color="#2563eb", marker="o", linewidth=2)
+
+peak = int(np.argmax(signups))
+ax.annotate(
+    f"Peak: {signups[peak]}",
+    xy=(peak, signups[peak]),
+    xytext=(peak - 0.8, signups[peak] + 15),
+    arrowprops={"arrowstyle": "->", "color": "#334155"},
+)
+ax.set_title("Monthly signups")
+
+for side in ["top", "right"]:
+    ax.spines[side].set_visible(False)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "color-plus-marker",
+        question: "Why pair color with a marker or line style?",
+        options: [
+          { id: "redundant", label: "The series stays distinguishable without relying on hue alone" },
+          { id: "faster", label: "It makes rendering faster" },
+          { id: "required", label: "Matplotlib refuses two solid lines" },
+        ],
+        answerId: "redundant",
+        explanation:
+          "Redundant encoding keeps the chart readable in grayscale and for readers with color-vision differences.",
+      },
+      {
+        id: "annotate",
+        question: "What does ax.annotate connect?",
+        options: [
+          { id: "point", label: "Text near the chart to a data coordinate" },
+          { id: "axes", label: "Two separate figures" },
+          { id: "legend", label: "The legend to the title" },
+        ],
+        answerId: "point",
+        explanation:
+          "xy is the data point and xytext is the text position, with an optional arrow connecting them.",
+      },
+      {
+        id: "style-context",
+        question: "What is the advantage of plt.style.context over plt.style.use?",
+        options: [
+          { id: "scoped", label: "The style applies only inside the with block" },
+          { id: "faster", label: "It renders at a higher DPI" },
+          { id: "labels", label: "It adds automatic titles" },
+        ],
+        answerId: "scoped",
+        explanation:
+          "The context manager restores the previous style after the block, which avoids leaking settings into later figures.",
+      },
+    ],
   },
 ];
