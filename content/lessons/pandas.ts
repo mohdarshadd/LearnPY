@@ -1331,5 +1331,875 @@ print(merged)`,
           "concat stacks compatible tables. merge aligns columns by a key and is the right tool for joining related data.",
       },
     ],
+    next: {
+      label: "Clean messy data",
+      href: "/learn/pandas/cleaning",
+    },
+  },
+  {
+    id: "pandas-cleaning",
+    library: "pandas",
+    slug: "cleaning",
+    title: "Clean messy data deliberately",
+    summary:
+      "Inspect missing values, remove duplicates, normalize text, and convert columns to the types your analysis actually needs.",
+    minutes: 12,
+    level: "beginner",
+    packages: ["pandas"],
+    objectives: [
+      "Measure missing values and duplicate rows before changing anything.",
+      "Choose between filling and dropping missing data.",
+      "Normalize text and convert numeric columns safely.",
+      "Remove duplicate keys while keeping the row you intend to keep.",
+      "Verify the cleaned table instead of assuming the operations worked.",
+    ],
+    sections: [
+      {
+        id: "inspect-first",
+        title: "Inspect before you clean",
+        blocks: [
+          {
+            type: "text",
+            text: "Cleaning is a series of decisions, not a single method call. Start by measuring what is wrong: which columns are missing values, which keys repeat, and which columns arrived as text when they should be numbers.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 102, 103],
+    "customer": [" Ada ", "Grace", "Grace", "Alan "],
+    "amount": ["25.50", "40.00", "40.00", "bad"],
+    "quantity": [2, None, None, 1],
+})
+
+print("missing:", raw.isna().sum().to_dict())
+print("duplicate order ids:", raw.duplicated(subset="order_id").sum())
+print(raw.dtypes)`,
+            language: "python",
+            caption: "Three questions before changing the table",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Cleaning can hide information",
+            text: "Filling every missing value with zero makes a chart look complete while erasing the fact that the value was never observed. Decide what missing means before choosing a fix.",
+          },
+        ],
+      },
+      {
+        id: "fill-or-drop",
+        title: "Fill, drop, or keep",
+        blocks: [
+          {
+            type: "text",
+            text: "dropna removes rows with missing values. fillna substitutes a value or a per-column mapping. Neither is universally correct: dropping a mostly empty column can be right, while filling a missing count with zero may be a meaningful business rule.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 103],
+    "amount": [25.5, None, 40.0],
+    "quantity": [2, None, 1],
+})
+
+print(raw.dropna(subset=["amount"]))
+print(raw.fillna({"quantity": 0}))`,
+            language: "python",
+            caption: "Different gaps, different decisions",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "Use dropna(subset=[...]) when the row cannot be analyzed without that column.",
+              "Use fillna when a known default is legitimate, such as a missing quantity meaning zero units.",
+              "Inspect how many rows each choice affects before accepting the result.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "types-and-text",
+        title: "Fix types and normalize text",
+        blocks: [
+          {
+            type: "text",
+            text: "Numbers stored as text cannot be summed, and names with inconsistent whitespace create duplicate-looking groups. Normalize the representation before analyzing the values.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 103],
+    "customer": [" Ada ", "Grace", "Alan "],
+    "amount": ["25.50", "40.00", "bad"],
+    "quantity": [2, None, 1],
+})
+
+clean = raw.copy()
+clean["customer"] = clean["customer"].str.strip()
+clean["amount"] = pd.to_numeric(clean["amount"], errors="coerce")
+clean["quantity"] = clean["quantity"].fillna(0).astype("int64")
+print(clean)
+print(clean.dtypes)`,
+            language: "python",
+            caption: "Strip, parse, and fill",
+            output: `   order_id customer  amount  quantity
+0       101      Ada    25.5         2
+1       102    Grace    40.0         0
+2       103     Alan     NaN         1
+order_id      int64
+customer        str
+amount      float64
+quantity      int64
+dtype: object`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "errors=\"coerce\" turns an unparseable value into NaN instead of raising. That is useful for an audit, but it also means you must count the new missing values and decide what they represent.",
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "pandas 3 uses a string dtype by default",
+            text: "You may see dtype str rather than object for text columns. The operations are the same; read the dtype report rather than assuming the old representation.",
+          },
+        ],
+      },
+      {
+        id: "duplicates",
+        title: "Remove duplicate keys carefully",
+        blocks: [
+          {
+            type: "text",
+            text: "duplicated marks rows whose key has already appeared. drop_duplicates removes them. The keep argument decides whether the first row, the last row, or no rows survive when a key repeats.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 102, 103],
+    "customer": ["Ada", "Grace", "Grace", "Alan"],
+    "amount": ["25.50", "40.00", "40.00", "bad"],
+})
+
+clean = raw.drop_duplicates(subset="order_id", keep="first").copy()
+print(clean)`,
+            language: "python",
+            caption: "One row per order key",
+            output: `   order_id customer amount
+0       101      Ada  25.50
+1       102    Grace  40.00
+3       103     Alan    bad`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Before removing a duplicate, ask why it exists. If two rows disagree on an important value, silently keeping the first one may discard the very problem you need to investigate.",
+          },
+        ],
+      },
+      {
+        id: "cleaning-recipe",
+        title: "A cleaning recipe",
+        blocks: [
+          {
+            type: "text",
+            text: "A reliable pass is: inspect, normalize text, parse types, handle duplicates, fill or drop with a reason, then assert the expected row count and missing-value count. The final assertions are part of the analysis.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 102, 103],
+    "customer": [" Ada ", "Grace", "Grace", "Alan "],
+    "amount": ["25.50", "40.00", "40.00", "bad"],
+    "quantity": [2, None, None, 1],
+})
+
+clean = raw.drop_duplicates(subset="order_id", keep="first").copy()
+clean["customer"] = clean["customer"].str.strip()
+clean["amount"] = pd.to_numeric(clean["amount"], errors="coerce")
+clean["quantity"] = clean["quantity"].fillna(0).astype("int64")
+
+assert len(clean) == 3
+assert clean["amount"].isna().sum() == 1
+print(clean)`,
+            language: "python",
+            caption: "Clean and verify in one pass",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The next lesson treats dates as a special kind of cleaning problem: they must be parsed, ordered, and grouped on a calendar rather than as ordinary strings.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "clean-orders",
+        prompt:
+          "Clean the orders table: keep the first row for each order_id, strip whitespace from customer, convert amount to numbers (invalid values become missing), and fill missing quantities with 0 as integers. Assign the result to clean.",
+        starterCode: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 102, 103],
+    "customer": [" Ada ", "Grace", "Grace", "Alan "],
+    "amount": ["25.50", "40.00", "40.00", "bad"],
+    "quantity": [2, None, None, 1],
+})
+
+# Clean the table.
+clean = None`,
+        tests: [
+          {
+            name: "duplicate orders are removed",
+            code: 'assert list(clean["order_id"]) == [101, 102, 103], f"unexpected ids: {list(clean[\'order_id\'])}"',
+          },
+          {
+            name: "names are trimmed",
+            code: 'assert list(clean["customer"]) == ["Ada", "Grace", "Alan"], f"unexpected names: {list(clean[\'customer\'])}"',
+          },
+          {
+            name: "amounts are numeric with one missing value",
+            code: 'assert pd.api.types.is_numeric_dtype(clean["amount"]), f"amount dtype is {clean[\'amount\'].dtype}"\nassert clean["amount"].isna().sum() == 1, "expected one unparseable amount"\nassert clean["amount"].iloc[0] == 25.5',
+          },
+          {
+            name: "quantities are filled integers",
+            code: 'assert list(clean["quantity"]) == [2, 0, 1], f"unexpected quantities: {list(clean[\'quantity\'])}"\nassert pd.api.types.is_integer_dtype(clean["quantity"]), f"quantity dtype is {clean[\'quantity\'].dtype}"',
+          },
+        ],
+        hints: [
+          "Remove duplicates before converting the amount column.",
+          "Use errors=\"coerce\" with pd.to_numeric, then fill quantity and cast it with astype(\"int64\").",
+        ],
+        solution: `import pandas as pd
+
+raw = pd.DataFrame({
+    "order_id": [101, 102, 102, 103],
+    "customer": [" Ada ", "Grace", "Grace", "Alan "],
+    "amount": ["25.50", "40.00", "40.00", "bad"],
+    "quantity": [2, None, None, 1],
+})
+
+clean = raw.drop_duplicates(subset="order_id", keep="first").copy()
+clean["customer"] = clean["customer"].str.strip()
+clean["amount"] = pd.to_numeric(clean["amount"], errors="coerce")
+clean["quantity"] = clean["quantity"].fillna(0).astype("int64")
+print(clean)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "count-duplicates",
+        question: "What does raw.duplicated(subset=\"order_id\").sum() measure?",
+        options: [
+          { id: "keys", label: "The number of repeated keys after the first occurrence" },
+          { id: "rows", label: "The total number of rows in the frame" },
+          { id: "nulls", label: "The number of missing order ids" },
+        ],
+        answerId: "keys",
+        explanation:
+          "duplicated marks every later row whose key already appeared. Summing the boolean result counts those repeated occurrences.",
+      },
+      {
+        id: "coerce",
+        question: "What does pd.to_numeric(..., errors=\"coerce\") do with an invalid string?",
+        options: [
+          { id: "nan", label: "Converts it to NaN" },
+          { id: "zero", label: "Converts it to 0" },
+          { id: "raise", label: "Always raises an error" },
+        ],
+        answerId: "nan",
+        explanation:
+          "Coercion turns values that cannot be parsed into missing values so you can count and handle them explicitly.",
+      },
+      {
+        id: "fill-zero",
+        question: "When is filling a missing quantity with 0 defensible?",
+        options: [
+          { id: "known", label: "When zero is the known business meaning of the missing value" },
+          { id: "always", label: "Always, because zero preserves the row count" },
+          { id: "never", label: "Never, because missing values must always be dropped" },
+        ],
+        answerId: "known",
+        explanation:
+          "Filling is only meaningful when the default is justified by the domain. Otherwise you are inventing observations.",
+      },
+    ],
+    next: {
+      label: "Work with dates and time series",
+      href: "/learn/pandas/time-series",
+    },
+  },
+  {
+    id: "pandas-time-series",
+    library: "pandas",
+    slug: "time-series",
+    title: "Work with dates and time series",
+    summary:
+      "Parse date strings, use a DatetimeIndex, resample calendar periods, and compute rolling windows without losing the time order.",
+    minutes: 12,
+    level: "beginner",
+    packages: ["pandas"],
+    objectives: [
+      "Convert date strings with pd.to_datetime.",
+      "Sort and index a table by time.",
+      "Aggregate with resample over calendar periods.",
+      "Compute rolling statistics on ordered observations.",
+      "Use the datetime accessor to derive calendar fields.",
+    ],
+    sections: [
+      {
+        id: "parse-dates",
+        title: "Parse dates into real timestamps",
+        blocks: [
+          {
+            type: "text",
+            text: "A date stored as text sorts alphabetically and has no calendar meaning. pd.to_datetime turns it into a Timestamp so pandas can order it, compare it, and extract parts such as the month or weekday.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31"],
+    "orders": [10, 12, 9, 15],
+})
+
+daily["date"] = pd.to_datetime(daily["date"])
+print(daily)
+print(daily.dtypes)`,
+            language: "python",
+            caption: "Text becomes datetime64",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Pass a format when the input is ambiguous",
+            text: "If the source uses a fixed layout, format=\"%Y-%m-%d\" is faster and avoids guessing between day-first and month-first dates.",
+          },
+        ],
+      },
+      {
+        id: "datetime-index",
+        title: "Make time the index",
+        blocks: [
+          {
+            type: "text",
+            text: "Setting the parsed date as the index and sorting it gives you a time-ordered frame. Every time-series operation after this point can rely on that order.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-31", "2026-01-28", "2026-01-29", "2026-01-30"],
+    "orders": [15, 10, 12, 9],
+})
+daily["date"] = pd.to_datetime(daily["date"])
+daily = daily.set_index("date").sort_index()
+print(daily)`,
+            language: "python",
+            caption: "Sorted by time, not by arrival order",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Once the DatetimeIndex exists, daily.loc[\"2026-02\"] selects a calendar month. Without a datetime index, that label lookup will not work.",
+          },
+        ],
+      },
+      {
+        id: "resample",
+        title: "Resample calendar periods",
+        blocks: [
+          {
+            type: "text",
+            text: "resample groups observations into fixed time periods. Use MS for the start of a month and ME for the end of a month. The aggregation then decides what happens inside each period.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31",
+             "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04",
+             "2026-02-05", "2026-02-06"],
+    "orders": [10, 12, 9, 15, 18, 14, 20, 16, 11, 13],
+})
+daily["date"] = pd.to_datetime(daily["date"])
+daily = daily.set_index("date").sort_index()
+
+monthly = daily["orders"].resample("MS").sum()
+print(monthly)`,
+            language: "python",
+            caption: "Monthly totals",
+            output: `date
+2026-01-01    46
+2026-02-01    92
+Freq: MS, Name: orders, dtype: int64`,
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Resampling creates empty periods",
+            text: "If a month has no rows, resample still produces that period with a zero for sum or NaN for mean. That can be correct, but check whether an empty month means zero activity or missing data.",
+          },
+        ],
+      },
+      {
+        id: "rolling",
+        title: "Rolling windows",
+        blocks: [
+          {
+            type: "text",
+            text: "A rolling window computes a statistic over a fixed number of observations. The first rows are NaN until the window has enough points. The index must be ordered, otherwise the window mixes the wrong days.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31",
+             "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04",
+             "2026-02-05", "2026-02-06"],
+    "orders": [10, 12, 9, 15, 18, 14, 20, 16, 11, 13],
+})
+daily["date"] = pd.to_datetime(daily["date"])
+daily = daily.set_index("date").sort_index()
+
+daily["rolling_7"] = daily["orders"].rolling(7).mean()
+print(daily.tail(4))`,
+            language: "python",
+            caption: "A seven-observation moving average",
+            output: `            orders  rolling_7
+date                         
+2026-02-03      20  14.000000
+2026-02-04      16  14.857143
+2026-02-05      11  14.714286
+2026-02-06      13  15.285714`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "rolling(7) counts observations, not calendar days. With a complete daily series those are the same thing; with gaps they are not, so decide which meaning your question requires.",
+          },
+        ],
+      },
+      {
+        id: "calendar-fields",
+        title: "Derive calendar fields",
+        blocks: [
+          {
+            type: "text",
+            text: "The .dt accessor exposes parts of each timestamp. These derived fields are useful for grouping by weekday, filtering a month, or labeling a chart.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+dates = pd.Series(pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03"]))
+
+print(dates.dt.day_name())
+print(dates.dt.month)`,
+            language: "python",
+            caption: "Calendar parts without string parsing",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The next lesson changes the shape of the table itself. Time-based aggregation groups rows; pivoting moves values between rows and columns.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "monthly-orders",
+        prompt:
+          "Parse the date column, set it as the index, sort the rows by time, then resample orders by month start and sum. Assign the Series to monthly.",
+        starterCode: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31",
+             "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04",
+             "2026-02-05", "2026-02-06"],
+    "orders": [10, 12, 9, 15, 18, 14, 20, 16, 11, 13],
+})
+
+# Parse, index, sort, and resample.
+monthly = None`,
+        tests: [
+          {
+            name: "monthly is a Series indexed by month starts",
+            code: 'assert isinstance(monthly, pd.Series), f"expected a Series, got {type(monthly).__name__}"\nassert isinstance(monthly.index, pd.DatetimeIndex), "expected a DatetimeIndex"',
+          },
+          {
+            name: "the monthly totals are correct",
+            code: 'assert list(monthly.index) == [pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-01")], f"unexpected periods: {list(monthly.index)}"\nassert list(monthly) == [46, 92], f"unexpected totals: {list(monthly)}"',
+          },
+        ],
+        hints: [
+          "Use pd.to_datetime on the date column, then set_index(\"date\") and sort_index().",
+          "Call daily[\"orders\"].resample(\"MS\").sum().",
+        ],
+        solution: `import pandas as pd
+
+daily = pd.DataFrame({
+    "date": ["2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31",
+             "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04",
+             "2026-02-05", "2026-02-06"],
+    "orders": [10, 12, 9, 15, 18, 14, 20, 16, 11, 13],
+})
+
+daily["date"] = pd.to_datetime(daily["date"])
+daily = daily.set_index("date").sort_index()
+monthly = daily["orders"].resample("MS").sum()
+print(monthly)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "datetime-index",
+        question: "Why set the parsed date as the index?",
+        options: [
+          { id: "time", label: "It enables time-aware sorting, slicing, and resampling" },
+          { id: "memory", label: "It removes missing values automatically" },
+          { id: "string", label: "It converts every column to text" },
+        ],
+        answerId: "time",
+        explanation:
+          "A DatetimeIndex gives pandas calendar semantics, including month slicing and resample periods.",
+      },
+      {
+        id: "month-start",
+        question: "Which resample alias represents the start of each month?",
+        options: [
+          { id: "ms", label: "MS" },
+          { id: "me", label: "ME" },
+          { id: "w", label: "W" },
+        ],
+        answerId: "ms",
+        explanation:
+          "MS is month start; ME is month end. The alias determines the label of each output period.",
+      },
+      {
+        id: "rolling-count",
+        question: "What does rolling(7) count?",
+        options: [
+          { id: "days", label: "Exactly seven calendar days" },
+          { id: "obs", label: "Seven observations in the ordered series" },
+          { id: "columns", label: "Seven columns" },
+        ],
+        answerId: "obs",
+        explanation:
+          "rolling counts observations. If the series has gaps, seven observations may span more than seven calendar days.",
+      },
+    ],
+    next: {
+      label: "Reshape wide and long tables",
+      href: "/learn/pandas/reshaping",
+    },
+  },
+  {
+    id: "pandas-reshaping",
+    library: "pandas",
+    slug: "reshaping",
+    title: "Reshape wide and long tables",
+    summary:
+      "Move values between rows and columns with pivot and melt, and use pivot_table when the same cell appears more than once.",
+    minutes: 11,
+    level: "beginner",
+    packages: ["pandas"],
+    objectives: [
+      "Describe the difference between wide and long data.",
+      "Pivot unique rows into columns.",
+      "Melt columns back into tidy rows.",
+      "Aggregate duplicates with pivot_table.",
+      "Choose a shape based on the next operation, not appearance alone.",
+    ],
+    sections: [
+      {
+        id: "wide-versus-long",
+        title: "Wide versus long",
+        blocks: [
+          {
+            type: "text",
+            text: "Long data has one observation per row: a region, a quarter, and a revenue value. Wide data spreads one of those dimensions across columns: one row per region, with a column for each quarter. Both can be correct; the useful shape depends on the question and the tool.",
+          },
+          {
+            type: "table",
+            caption: "The same values, two shapes",
+            headers: ["Shape", "Rows", "Columns"],
+            rows: [
+              ["Long", "One row per region-quarter", "region, quarter, revenue"],
+              ["Wide", "One row per region", "region, Q1, Q2"],
+            ],
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Tidy data is a default, not a rule",
+            text: "Long data is usually easier to group, filter, and plot. Wide data is sometimes easier to read or feed to a model. Reshape when the next step needs the other layout.",
+          },
+        ],
+      },
+      {
+        id: "pivot",
+        title: "Pivot long data into columns",
+        blocks: [
+          {
+            type: "text",
+            text: "pivot takes an index column, a columns column, and a values column. It requires each index-columns pair to be unique; if a pair repeats, pivot does not know which value belongs in the cell.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "North", "South", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95],
+})
+
+wide = sales.pivot(index="region", columns="quarter", values="revenue")
+print(wide)`,
+            language: "python",
+            caption: "One row per region",
+            output: `quarter   Q1   Q2
+region           
+North    100  120
+South     80   95`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The output index is region and the output columns come from quarter. The name quarter remains attached to the column axis, which matters when you melt the frame back.",
+          },
+        ],
+      },
+      {
+        id: "melt",
+        title: "Melt wide data back to rows",
+        blocks: [
+          {
+            type: "text",
+            text: "melt is the inverse operation for the identifier columns: it turns wide columns into a pair of variable and value columns. Reset the index first so the region labels become ordinary data again.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+sales = pd.DataFrame({
+    "region": ["North", "North", "South", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95],
+})
+wide = sales.pivot(index="region", columns="quarter", values="revenue")
+
+tidy = (
+    wide.reset_index()
+    .melt(id_vars="region", var_name="quarter", value_name="revenue")
+    .sort_values(["region", "quarter"])
+    .reset_index(drop=True)
+)
+print(tidy)`,
+            language: "python",
+            caption: "Back to one observation per row",
+            output: `  region quarter  revenue
+0  North      Q1      100
+1  North      Q2      120
+2  South      Q1       80
+3  South      Q2       95`,
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Without reset_index, the region index would not be available as an id_vars column. Without sort_values, melt follows the column order rather than a tidy region-quarter order.",
+          },
+        ],
+      },
+      {
+        id: "pivot-table",
+        title: "Pivot tables handle duplicates",
+        blocks: [
+          {
+            type: "text",
+            text: "pivot_table is the aggregation-aware version. When an index-columns pair repeats, it combines the values with aggfunc instead of failing. fill_value decides what appears for an empty cell.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+long = pd.DataFrame({
+    "region": ["North", "North", "South", "South", "North", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95, 10, 20],
+})
+
+summary = long.pivot_table(
+    index="region",
+    columns="quarter",
+    values="revenue",
+    aggfunc="sum",
+    fill_value=0,
+)
+print(summary)`,
+            language: "python",
+            caption: "Duplicate cells are summed",
+            output: `quarter   Q1   Q2
+region           
+North    110  120
+South     80  115`,
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "pivot_table can hide a duplicate problem",
+            text: "Summing duplicate cells is valid only if the duplicates are additive measures. If each row is an order, summing is sensible; if each row is a status snapshot, you probably need a different aggregation or a cleanup step.",
+          },
+        ],
+      },
+      {
+        id: "reshaping-recipe",
+        title: "Choose the shape for the next step",
+        blocks: [
+          {
+            type: "text",
+            text: "Before reshaping, name the observation, the identifier columns, and the measurement. After reshaping, check the index, columns, and one known cell against the long input. A reshape that runs without error can still put the wrong values in the wrong cells.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+
+long = pd.DataFrame({
+    "region": ["North", "North", "South", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95],
+})
+
+wide = long.pivot(index="region", columns="quarter", values="revenue")
+assert wide.loc["North", "Q2"] == 120
+assert list(wide.columns) == ["Q1", "Q2"]
+print(wide)`,
+            language: "python",
+            caption: "Reshape and verify one cell",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "This completes the pandas core. The Matplotlib track turns these tables into charts, starting with the anatomy of a figure and the relationship between figures and axes.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "pivot-and-melt",
+        prompt:
+          "Pivot long sales into wide with region as the index and quarter as the columns. Assign that to wide. Then melt wide back into a tidy frame with columns region, quarter, and revenue, sorted by region and quarter. Assign that to tidy.",
+        starterCode: `import pandas as pd
+
+long = pd.DataFrame({
+    "region": ["North", "North", "South", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95],
+})
+
+# Build both shapes.
+wide = None
+tidy = None`,
+        tests: [
+          {
+            name: "wide has one row per region",
+            code: 'assert isinstance(wide, pd.DataFrame), f"expected a DataFrame, got {type(wide).__name__}"\nassert list(wide.index) == ["North", "South"], f"unexpected regions: {list(wide.index)}"\nassert list(wide.columns) == ["Q1", "Q2"], f"unexpected quarters: {list(wide.columns)}"',
+          },
+          {
+            name: "wide has the correct cells",
+            code: 'assert wide.loc["North", "Q2"] == 120\nassert wide.loc["South", "Q1"] == 80',
+          },
+          {
+            name: "tidy is back to one observation per row",
+            code: 'assert list(tidy.columns) == ["region", "quarter", "revenue"], f"unexpected columns: {list(tidy.columns)}"\nexpected = long.sort_values(["region", "quarter"]).reset_index(drop=True)\nassert tidy.reset_index(drop=True).equals(expected), f"expected\\n{expected}\\ngot\\n{tidy}"',
+          },
+        ],
+        hints: [
+          "Use long.pivot(index=\"region\", columns=\"quarter\", values=\"revenue\").",
+          "For tidy, reset the wide index, melt with id_vars=\"region\", then sort and reset the index.",
+        ],
+        solution: `import pandas as pd
+
+long = pd.DataFrame({
+    "region": ["North", "North", "South", "South"],
+    "quarter": ["Q1", "Q2", "Q1", "Q2"],
+    "revenue": [100, 120, 80, 95],
+})
+
+wide = long.pivot(index="region", columns="quarter", values="revenue")
+tidy = (
+    wide.reset_index()
+    .melt(id_vars="region", var_name="quarter", value_name="revenue")
+    .sort_values(["region", "quarter"])
+    .reset_index(drop=True)
+)
+print(wide)
+print(tidy)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "long-data",
+        question: "What does long data usually have?",
+        options: [
+          { id: "one", label: "One observation per row" },
+          { id: "many", label: "One row per identifier with measurements spread across columns" },
+          { id: "none", label: "No identifier columns" },
+        ],
+        answerId: "one",
+        explanation:
+          "Long or tidy data records one observation per row, with columns describing its identifiers and measurements.",
+      },
+      {
+        id: "pivot-unique",
+        question: "What does pivot require for each index-columns pair?",
+        options: [
+          { id: "unique", label: "A unique value" },
+          { id: "sum", label: "At least two values to sum" },
+          { id: "missing", label: "A missing value" },
+        ],
+        answerId: "unique",
+        explanation:
+          "pivot places one value in each cell, so repeated pairs are ambiguous. Use pivot_table when aggregation is needed.",
+      },
+      {
+        id: "melt",
+        question: "What does melt do?",
+        options: [
+          { id: "wide", label: "Turns wide columns into variable-value rows" },
+          { id: "sort", label: "Sorts rows by the index" },
+          { id: "join", label: "Joins two frames on a key" },
+        ],
+        answerId: "wide",
+        explanation:
+          "melt converts wide measurement columns into a variable column and a value column, producing long data.",
+      },
+    ],
   },
 ];
