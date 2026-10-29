@@ -1402,5 +1402,739 @@ cv_mae = -cv_scores.mean()`,
           "Repeated peeking turns the test set into a tuning set and inflates the reported performance.",
       },
     ],
+    next: {
+      label: "Classify with probabilities",
+      href: "/learn/sklearn/classification",
+    },
+  },
+  {
+    id: "sklearn-classification",
+    library: "sklearn",
+    slug: "classification",
+    title: "Classify with probabilities",
+    summary:
+      "Train a binary classifier, read predicted probabilities, and choose a threshold that matches the cost of mistakes.",
+    minutes: 14,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy"],
+    objectives: [
+      "Fit a logistic regression classifier with a pipeline.",
+      "Distinguish predicted labels from predicted probabilities.",
+      "Move the decision threshold deliberately.",
+      "Reason about class imbalance and error costs.",
+      "Interpret coefficients as log-odds changes.",
+    ],
+    sections: [
+      {
+        id: "discrete-target",
+        title: "Predict a category",
+        blocks: [
+          {
+            type: "text",
+            text: "Classification predicts a discrete label. In binary classification the target has two values, such as malignant versus benign. Accuracy is a starting point, but it can hide a model that ignores the smaller class.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+
+cancer = load_breast_cancer()
+print("rows:    ", cancer.data.shape[0])
+print("features:", cancer.data.shape[1])
+print("classes: ", cancer.target_names)
+labels, counts = np.unique(cancer.target, return_counts=True)
+print("counts:  ", dict(zip(labels, counts)))`,
+            language: "python",
+            caption: "A binary target with named classes",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Accuracy is not automatically the goal",
+            text: "If one class is rare, predicting the majority everywhere can look accurate while being useless. The cost of false positives and false negatives belongs in the decision.",
+          },
+        ],
+      },
+      {
+        id: "logistic-regression",
+        title: "Fit logistic regression",
+        blocks: [
+          {
+            type: "text",
+            text: "LogisticRegression models the log-odds of the positive class with a linear combination of features. Standardize the features inside a pipeline so the coefficients and optimizer behave consistently.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data,
+    cancer.target,
+    test_size=0.2,
+    random_state=42,
+    stratify=cancer.target,
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+print("first labels:", predictions[:8])
+print("test rows:   ", len(predictions))`,
+            language: "python",
+            caption: "Fit on training rows and predict labels",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "max_iter=1000 gives the solver enough iterations to converge on this scaled dataset. If scikit-learn warns about convergence, increase the limit or check the feature scale rather than ignoring it.",
+          },
+        ],
+      },
+      {
+        id: "probabilities",
+        title: "Look behind the label",
+        blocks: [
+          {
+            type: "text",
+            text: "predict_proba returns one probability per class for every row. The columns follow model.classes_ order, so for classes [0, 1] the second column is the probability of class 1.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+probabilities = model.predict_proba(X_test)
+
+print("classes:      ", model.named_steps["classify"].classes_)
+print("shape:        ", probabilities.shape)
+print("row sums:     ", probabilities.sum(axis=1)[:3].round(6))
+print("positive probs:", probabilities[:5, 1].round(3))`,
+            language: "python",
+            caption: "Probabilities are per class and sum to one",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "A probability is not a guarantee",
+            text: "Calibration can drift when the training distribution changes. Treat probabilities as model estimates, and validate them on data that resembles deployment.",
+          },
+        ],
+      },
+      {
+        id: "threshold",
+        title: "The threshold is a decision",
+        blocks: [
+          {
+            type: "text",
+            text: "predict applies a 0.5 threshold to the positive-class probability. Lowering it catches more positives but also raises false positives. Raising it does the reverse. Choose the threshold from the cost of each mistake, not from habit.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+positive_probability = model.predict_proba(X_test)[:, 1]
+
+for threshold in [0.3, 0.5, 0.7]:
+    labels = (positive_probability >= threshold).astype(int)
+    print(f"threshold={threshold}: positives={labels.sum()}")`,
+            language: "python",
+            caption: "Changing the cutoff changes the decisions",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The model's ranking can stay the same while the threshold changes. Metrics that use probabilities, such as ROC-AUC, measure ranking quality; metrics that use labels depend on the threshold.",
+          },
+        ],
+      },
+      {
+        id: "imbalance",
+        title: "Account for imbalance",
+        blocks: [
+          {
+            type: "text",
+            text: "When one class is much rarer, the optimizer can favor the majority. class_weight=\"balanced\" gives the classes weights inversely proportional to their frequency. It changes the tradeoff, not the underlying information.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+
+for weight in [None, "balanced"]:
+    model = Pipeline([
+        ("scale", StandardScaler()),
+        ("classify", LogisticRegression(max_iter=1000, class_weight=weight)),
+    ])
+    model.fit(X_train, y_train)
+    print(weight, round(model.score(X_test, y_test), 3))`,
+            language: "python",
+            caption: "Compare class weighting",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Resampling is not automatically better",
+            text: "Class weights are simple and keep every row. Oversampling, undersampling, and synthetic data change the training distribution and need their own validation.",
+          },
+        ],
+      },
+      {
+        id: "coefficients",
+        title: "Read coefficients as log-odds",
+        blocks: [
+          {
+            type: "text",
+            text: "For a scaled feature, a positive coefficient increases the log-odds of the positive class when that feature rises by one standard deviation. Exponentiating the coefficient gives an odds multiplier, not a probability.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+
+coefs = model.named_steps["classify"].coef_[0]
+order = np.argsort(np.abs(coefs))[::-1]
+for index in order[:4]:
+    odds = np.exp(coefs[index])
+    print(f"{cancer.feature_names[index]:>22}: coef={coefs[index]: .2f}, odds={odds:.2f}")`,
+            language: "python",
+            caption: "Coefficients are additive on the log-odds scale",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Correlated features still split credit. A large coefficient is not proof that changing that feature causes the outcome.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "cancer-classifier",
+        prompt:
+          "Fit a StandardScaler plus LogisticRegression(max_iter=1000) pipeline on the breast-cancer training rows. Store labels in predictions, class probabilities in probabilities, and test accuracy in accuracy.",
+        starterCode: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+
+# Fit, predict, and evaluate.
+model = None
+predictions = None
+probabilities = None
+accuracy = None`,
+        tests: [
+          {
+            name: "the classifier predicted labels and probabilities",
+            code: 'import numpy as np\nassert predictions.shape == (114,), predictions.shape\nassert probabilities.shape == (114, 2), probabilities.shape\nassert set(np.unique(predictions)).issubset({0, 1})',
+          },
+          {
+            name: "the probabilities are valid",
+            code: 'import numpy as np\nassert np.allclose(probabilities.sum(axis=1), 1), probabilities.sum(axis=1)[:3]\nassert ((probabilities >= 0) & (probabilities <= 1)).all()',
+          },
+          {
+            name: "the held-out accuracy is strong",
+            code: 'from sklearn.metrics import accuracy_score\nassert 0.9 < accuracy <= 1.0, accuracy\nassert abs(accuracy - accuracy_score(y_test, predictions)) < 1e-12',
+          },
+        ],
+        hints: [
+          "Build Pipeline([(\"scale\", StandardScaler()), (\"classify\", LogisticRegression(max_iter=1000))]).",
+          "Use model.predict(X_test) for labels and model.predict_proba(X_test) for probabilities.",
+        ],
+        solution: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+probabilities = model.predict_proba(X_test)
+accuracy = accuracy_score(y_test, predictions)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "predict-vs-proba",
+        question: "What does predict_proba add beyond predict?",
+        options: [
+          { id: "confidence", label: "A per-class probability for each row" },
+          { id: "label", label: "A guaranteed correct label" },
+          { id: "split", label: "A new train/test split" },
+        ],
+        answerId: "confidence",
+        explanation:
+          "predict_proba exposes the model's estimated class probabilities before a threshold turns them into labels.",
+      },
+      {
+        id: "threshold-cost",
+        question: "What should guide the threshold choice?",
+        options: [
+          { id: "cost", label: "The relative cost of false positives and false negatives" },
+          { id: "default", label: "Always 0.5, regardless of context" },
+          { id: "accuracy", label: "Only the training accuracy" },
+        ],
+        answerId: "cost",
+        explanation:
+          "The threshold encodes a decision policy; different error costs call for different cutoffs.",
+      },
+      {
+        id: "class-weight",
+        question: "What does class_weight=\"balanced\" change?",
+        options: [
+          { id: "weight", label: "The weight each class contributes to the fit" },
+          { id: "rows", label: "The number of test rows" },
+          { id: "features", label: "The feature names" },
+        ],
+        answerId: "weight",
+        explanation:
+          "It adjusts class contributions inversely to frequency so the minority class is not ignored.",
+      },
+    ],
+    next: {
+      label: "Choose the right classification metric",
+      href: "/learn/sklearn/classification-metrics",
+    },
+  },
+  {
+    id: "sklearn-classification-metrics",
+    library: "sklearn",
+    slug: "classification-metrics",
+    title: "Choose the right classification metric",
+    summary:
+      "Read a confusion matrix, balance precision and recall, and use ranking metrics when the threshold is not fixed.",
+    minutes: 14,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy", "matplotlib"],
+    objectives: [
+      "Read true positives, false positives, and false negatives.",
+      "Compute precision, recall, and F1.",
+      "Use ROC-AUC to evaluate ranking.",
+      "Relate threshold changes to error types.",
+      "Choose a metric from the decision, not from habit.",
+    ],
+    sections: [
+      {
+        id: "confusion-matrix",
+        title: "Start with the four outcomes",
+        blocks: [
+          {
+            type: "text",
+            text: "For binary classification, every prediction falls into one of four cells: true negative, false positive, false negative, or true positive. The confusion matrix keeps those counts separate, which accuracy collapses into one number.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+matrix = confusion_matrix(y_test, predictions)
+print(matrix)
+tn, fp, fn, tp = matrix.ravel()
+print("TN, FP, FN, TP:", tn, fp, fn, tp)`,
+            language: "python",
+            caption: "The four cells behind one accuracy number",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Rows are actual, columns are predicted",
+            text: "With labels [0, 1], the matrix is [[TN, FP], [FN, TP]]. Read the axes before interpreting the numbers.",
+          },
+        ],
+      },
+      {
+        id: "precision-recall",
+        title: "Precision and recall answer different questions",
+        blocks: [
+          {
+            type: "text",
+            text: "Precision asks: of the rows predicted positive, how many were positive? Recall asks: of the actual positives, how many did we find? Improving one often costs the other when the threshold moves.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+print("precision:", round(precision_score(y_test, predictions), 3))
+print("recall:   ", round(recall_score(y_test, predictions), 3))`,
+            language: "python",
+            caption: "Two views of the positive-class errors",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "High precision means few false alarms.",
+              "High recall means few missed positives.",
+              "A spam filter and a cancer screen usually need different balances.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "f1",
+        title: "Summarize with F1, carefully",
+        blocks: [
+          {
+            type: "text",
+            text: "F1 is the harmonic mean of precision and recall. It drops when either side is poor and is useful when both errors matter similarly. It is not a universal score: it ignores true negatives and assumes precision and recall deserve equal weight.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+print(classification_report(
+    y_test,
+    predictions,
+    target_names=cancer.target_names,
+    digits=3,
+))`,
+            language: "python",
+            caption: "Per-class precision, recall, and F1",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "classification_report is a useful first look, but still report the confusion matrix when the cost of each error matters. A compact score cannot carry the full decision context.",
+          },
+        ],
+      },
+      {
+        id: "roc-auc",
+        title: "Evaluate ranking with ROC-AUC",
+        blocks: [
+          {
+            type: "text",
+            text: "ROC-AUC measures how well the model ranks a random positive above a random negative across all thresholds. It is threshold-independent, so it is useful before committing to a cutoff. It does not tell you the precision at the operating point you will deploy.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+positive_probability = model.predict_proba(X_test)[:, 1]
+print("ROC-AUC:", round(roc_auc_score(y_test, positive_probability), 3))`,
+            language: "python",
+            caption: "Ranking quality across all thresholds",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "AUC can look strong with poor deployment decisions",
+            text: "A high AUC does not guarantee useful precision at the threshold you choose. Evaluate the operating point with a confusion matrix or precision-recall curve.",
+          },
+        ],
+      },
+      {
+        id: "threshold-tradeoff",
+        title: "Connect the threshold to the errors",
+        blocks: [
+          {
+            type: "text",
+            text: "As the threshold falls, more rows become positive: recall tends to rise and precision tends to fall. Plot the tradeoff on validation data, choose an operating point that matches the cost of errors, then report the chosen threshold.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+positive_probability = model.predict_proba(X_test)[:, 1]
+
+thresholds = np.linspace(0.05, 0.95, 19)
+precisions = []
+recalls = []
+for threshold in thresholds:
+    labels = (positive_probability >= threshold).astype(int)
+    precisions.append(precision_score(y_test, labels, zero_division=0))
+    recalls.append(recall_score(y_test, labels, zero_division=0))
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.plot(thresholds, precisions, marker="o", label="Precision")
+ax.plot(thresholds, recalls, marker="s", label="Recall")
+ax.set_title("Precision and recall by threshold")
+ax.set_xlabel("Threshold")
+ax.set_ylabel("Score")
+ax.legend()`,
+            language: "python",
+            caption: "The threshold is an explicit operating decision",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Choose the threshold on validation folds or a dedicated validation split. If you tune it on the test set, the final reported metric is no longer an honest estimate.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "classification-metrics",
+        prompt:
+          "Fit the scaled logistic regression pipeline on the training rows. Store the confusion matrix in matrix, unpack tn, fp, fn, tp, and compute precision, recall, F1, and ROC-AUC from the positive-class probabilities.",
+        starterCode: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (confusion_matrix, f1_score, precision_score,
+                             recall_score, roc_auc_score)
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+
+# Fit and measure.
+model = None
+predictions = None
+probabilities = None
+matrix = None
+tn = fp = fn = tp = None
+precision = None
+recall = None
+f1 = None
+roc_auc = None`,
+        tests: [
+          {
+            name: "the confusion matrix accounts for every test row",
+            code: 'import numpy as np\nassert matrix.shape == (2, 2), matrix.shape\nassert matrix.sum() == len(y_test)\nassert tn + fp + fn + tp == len(y_test)\nassert np.isclose(tn, matrix[0, 0]) and np.isclose(tp, matrix[1, 1])',
+          },
+          {
+            name: "precision, recall, and F1 match the matrix",
+            code: 'import numpy as np\nassert np.isclose(precision, tp / (tp + fp))\nassert np.isclose(recall, tp / (tp + fn))\nassert np.isclose(f1, 2 * precision * recall / (precision + recall))',
+          },
+          {
+            name: "the ranking metric uses positive probabilities",
+            code: 'from sklearn.metrics import roc_auc_score\nassert 0.9 < roc_auc <= 1.0, roc_auc\nassert abs(roc_auc - roc_auc_score(y_test, probabilities[:, 1])) < 1e-12',
+          },
+        ],
+        hints: [
+          "Use confusion_matrix(y_test, predictions).ravel() to unpack tn, fp, fn, tp.",
+          "Pass probabilities[:, 1], the positive-class column, to roc_auc_score.",
+        ],
+        solution: `import numpy as np
+from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (confusion_matrix, f1_score, precision_score,
+                             recall_score, roc_auc_score)
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+probabilities = model.predict_proba(X_test)
+matrix = confusion_matrix(y_test, predictions)
+tn, fp, fn, tp = matrix.ravel()
+precision = precision_score(y_test, predictions)
+recall = recall_score(y_test, predictions)
+f1 = f1_score(y_test, predictions)
+roc_auc = roc_auc_score(y_test, probabilities[:, 1])`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "precision-question",
+        question: "What question does precision answer?",
+        options: [
+          { id: "predicted", label: "Of the predicted positives, how many were actually positive?" },
+          { id: "actual", label: "Of the actual positives, how many were found?" },
+          { id: "negatives", label: "How many true negatives were there?" },
+        ],
+        answerId: "predicted",
+        explanation:
+          "Precision is TP / (TP + FP): it measures the purity of the positive predictions.",
+      },
+      {
+        id: "recall-question",
+        question: "What question does recall answer?",
+        options: [
+          { id: "actual", label: "Of the actual positives, how many were found?" },
+          { id: "predicted", label: "Of the predicted positives, how many were correct?" },
+          { id: "auc", label: "What is the area under the ROC curve?" },
+        ],
+        answerId: "actual",
+        explanation:
+          "Recall is TP / (TP + FN): it measures coverage of the positive class.",
+      },
+      {
+        id: "auc-threshold",
+        question: "Why is ROC-AUC called threshold-independent?",
+        options: [
+          { id: "ranking", label: "It evaluates ranking across all thresholds" },
+          { id: "labels", label: "It ignores the true labels" },
+          { id: "accuracy", label: "It always equals accuracy" },
+        ],
+        answerId: "ranking",
+        explanation:
+          "ROC-AUC summarizes how well positive rows are ranked above negative rows across every cutoff.",
+      },
+    ],
   },
 ];
