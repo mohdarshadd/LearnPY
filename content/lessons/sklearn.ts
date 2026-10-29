@@ -680,5 +680,727 @@ X_test_ready = preprocessor.transform(X_test)`,
           "It routes numeric and categorical columns through their own transformers, then combines the outputs.",
       },
     ],
+    next: {
+      label: "Predict a number with regression",
+      href: "/learn/sklearn/regression",
+    },
+  },
+  {
+    id: "sklearn-regression",
+    library: "sklearn",
+    slug: "regression",
+    title: "Predict a number with regression",
+    summary:
+      "Fit a continuous target, read coefficients carefully, and evaluate predictions in the target's own units.",
+    minutes: 14,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy", "matplotlib"],
+    objectives: [
+      "Fit and predict a continuous target with LinearRegression.",
+      "Interpret coefficients when features are scaled.",
+      "Measure MAE, RMSE, and R² on held-out rows.",
+      "Inspect residuals for structure the metrics hide.",
+      "Use Ridge regularization when coefficients are unstable.",
+    ],
+    sections: [
+      {
+        id: "continuous-target",
+        title: "Start from the target",
+        blocks: [
+          {
+            type: "text",
+            text: "Regression predicts a continuous quantity: a price, a duration, a demand count, or a disease-progression score. The target determines the metric. An error of 50 means something different for dollars than for days, so always report metrics in the target's units.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+
+diabetes = load_diabetes()
+print("rows:    ", diabetes.data.shape[0])
+print("features:", diabetes.data.shape[1])
+print("target range:", diabetes.target.min(), "to", diabetes.target.max())
+print("feature names:", diabetes.feature_names[:4])`,
+            language: "python",
+            caption: "A small regression dataset with a continuous target",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Features are already standardized here",
+            text: "The diabetes dataset ships with each feature centered and scaled. In your own data, place StandardScaler inside the pipeline before the regressor.",
+          },
+        ],
+      },
+      {
+        id: "fit-a-model",
+        title: "Fit a regression pipeline",
+        blocks: [
+          {
+            type: "text",
+            text: "LinearRegression finds coefficients that minimize squared error on the training rows. A pipeline keeps any feature preparation with the model, so the same learned transformation is used at prediction time.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data,
+    diabetes.target,
+    test_size=0.2,
+    random_state=42,
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+print("predictions:", predictions[:4].round(1))
+print("test rows:  ", len(predictions))`,
+            language: "python",
+            caption: "Fit on training rows, predict held-out rows",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Calling model.score on a regressor returns R² by default. That is useful, but it is not the whole story. A model can have a respectable R² and still make errors that are too large for the decision at hand.",
+          },
+        ],
+      },
+      {
+        id: "coefficients",
+        title: "Read coefficients in context",
+        blocks: [
+          {
+            type: "text",
+            text: "For a scaled feature, a coefficient estimates the target change for a one-standard-deviation increase in that feature, holding the others fixed. Positive and negative signs describe association, not proof of causation.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+model.fit(X_train, y_train)
+
+coefs = model.named_steps["regress"].coef_
+order = np.argsort(np.abs(coefs))[::-1]
+for index in order[:5]:
+    print(f"{diabetes.feature_names[index]:>8}: {coefs[index]: .1f}")`,
+            language: "python",
+            caption: "The largest coefficients in absolute value",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Collinearity splits credit",
+            text: "When two features carry similar information, their individual coefficients can become unstable or flip sign. Interpret them together, or use regularization.",
+          },
+        ],
+      },
+      {
+        id: "metrics",
+        title: "Measure error in target units",
+        blocks: [
+          {
+            type: "text",
+            text: "Mean absolute error is the average absolute miss and is easy to explain. Root mean squared error punishes large misses more strongly. R² compares the model's squared error with the squared error of predicting the training mean; 1 is perfect, 0 is that baseline, and values can be negative on held-out data.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, predictions)
+rmse = np.sqrt(mean_squared_error(y_test, predictions))
+r2 = r2_score(y_test, predictions)
+print(f"MAE:  {mae:.1f}")
+print(f"RMSE: {rmse:.1f}")
+print(f"R2:   {r2:.3f}")`,
+            language: "python",
+            caption: "Three views of the same regression errors",
+            runnable: true,
+          },
+          {
+            type: "list",
+            ordered: false,
+            items: [
+              "MAE is robust and has the same units as the target.",
+              "RMSE grows faster when a few predictions are very wrong.",
+              "R² is scale-free but can hide the size of the actual error.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "residuals",
+        title: "Plot what the metrics miss",
+        blocks: [
+          {
+            type: "text",
+            text: "A residual is actual minus predicted. Plot residuals against predictions. A random cloud around zero is reassuring; a curve, a funnel, or a cluster suggests the linear model is missing structure.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+residuals = y_test - predictions
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.scatter(predictions, residuals, alpha=0.6)
+ax.axhline(0, color="#334155", linewidth=1)
+ax.set_title("Residuals vs predictions")
+ax.set_xlabel("Predicted target")
+ax.set_ylabel("Actual - predicted")`,
+            language: "python",
+            caption: "Look for a pattern, not just a score",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Residuals are diagnostic, not decoration",
+            text: "If residuals fan out as predictions grow, a constant-error assumption may be wrong. If they curve, a nonlinear feature or transformation may help.",
+          },
+        ],
+      },
+      {
+        id: "ridge",
+        title: "Stabilize with Ridge",
+        blocks: [
+          {
+            type: "text",
+            text: "Ridge adds a penalty on the size of the coefficients. A larger alpha shrinks them toward zero. This can improve held-out performance when features are correlated or the sample is small, but it also introduces bias.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+for alpha in [0.01, 0.1, 1.0, 10.0]:
+    model = Pipeline([
+        ("scale", StandardScaler()),
+        ("regress", Ridge(alpha=alpha)),
+    ])
+    model.fit(X_train, y_train)
+    print(f"alpha={alpha:>4}: R2={model.score(X_test, y_test):.3f}")`,
+            language: "python",
+            caption: "Compare regularization strengths on the same split",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Do not choose alpha by peeking repeatedly at the test score. Use cross-validation on the training rows, then evaluate the chosen model once on the test set.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "diabetes-regression",
+        prompt:
+          "Fit a StandardScaler plus LinearRegression pipeline on the diabetes training rows. Predict X_test, then store mean absolute error in mae, root mean squared error in rmse, and R² in r2.",
+        starterCode: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+# Fit, predict, and measure.
+model = None
+predictions = None
+mae = None
+rmse = None
+r2 = None`,
+        tests: [
+          {
+            name: "the regression pipeline made predictions",
+            code: 'import numpy as np\nfrom sklearn.pipeline import Pipeline\nassert isinstance(model, Pipeline), type(model).__name__\nassert hasattr(model, "predict")\nassert predictions.shape == (89,), predictions.shape\nassert np.isfinite(predictions).all()',
+          },
+          {
+            name: "the errors are in target units",
+            code: 'import numpy as np\nfrom sklearn.metrics import mean_absolute_error, mean_squared_error\nassert 20 < mae < 70, mae\nassert 20 < rmse < 80, rmse\nassert np.isclose(mae, mean_absolute_error(y_test, predictions))\nassert np.isclose(rmse, np.sqrt(mean_squared_error(y_test, predictions)))',
+          },
+          {
+            name: "R² matches the predictions",
+            code: 'from sklearn.metrics import r2_score\nassert -0.5 < r2 < 1.0, r2\nassert abs(r2 - r2_score(y_test, predictions)) < 1e-12',
+          },
+        ],
+        hints: [
+          "Build Pipeline([(\"scale\", StandardScaler()), (\"regress\", LinearRegression())]).",
+          "Use mean_absolute_error(y_test, predictions) and np.sqrt(mean_squared_error(y_test, predictions)).",
+        ],
+        solution: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+mae = mean_absolute_error(y_test, predictions)
+rmse = np.sqrt(mean_squared_error(y_test, predictions))
+r2 = r2_score(y_test, predictions)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "rmse-vs-mae",
+        question: "What does RMSE emphasize compared with MAE?",
+        options: [
+          { id: "large", label: "Large errors are penalized more strongly" },
+          { id: "units", label: "It removes the target units" },
+          { id: "classification", label: "It only works for class labels" },
+        ],
+        answerId: "large",
+        explanation:
+          "Squaring before averaging gives large residuals more influence on RMSE.",
+      },
+      {
+        id: "r2-zero",
+        question: "What does an R² of 0 mean on held-out data?",
+        options: [
+          { id: "baseline", label: "The model is no better than predicting the training mean" },
+          { id: "perfect", label: "The predictions are perfect" },
+          { id: "zero-error", label: "The target values are all zero" },
+        ],
+        answerId: "baseline",
+        explanation:
+          "R² compares squared error with the mean-prediction baseline; 0 matches that baseline.",
+      },
+      {
+        id: "ridge-alpha",
+        question: "What happens as Ridge alpha increases?",
+        options: [
+          { id: "shrink", label: "Coefficients are shrunk more strongly toward zero" },
+          { id: "more", label: "The model always fits the training data more closely" },
+          { id: "remove", label: "The intercept is removed" },
+        ],
+        answerId: "shrink",
+        explanation:
+          "A larger penalty reduces coefficient magnitude, trading some training fit for stability.",
+      },
+    ],
+    next: {
+      label: "Evaluate with validation",
+      href: "/learn/sklearn/evaluation",
+    },
+  },
+  {
+    id: "sklearn-evaluation",
+    library: "sklearn",
+    slug: "evaluation",
+    title: "Evaluate with validation",
+    summary:
+      "Go beyond one train/test split with baselines, cross-validation, and honest comparisons that separate signal from noise.",
+    minutes: 13,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy"],
+    objectives: [
+      "Compare a model with a simple baseline.",
+      "Use cross-validation to estimate variability.",
+      "Read a train-versus-validation gap.",
+      "Use negative-error scoring correctly.",
+      "Keep test data out of model selection.",
+    ],
+    sections: [
+      {
+        id: "baseline",
+        title: "Earn the right to be complicated",
+        blocks: [
+          {
+            type: "text",
+            text: "A baseline is the simplest reasonable prediction. For regression, predicting the training mean is a strong starting point. If a complex model cannot beat that baseline on held-out data, the complexity has not earned its place.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.dummy import DummyRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+baseline = DummyRegressor(strategy="mean")
+baseline.fit(X_train, y_train)
+baseline_predictions = baseline.predict(X_test)
+print("baseline MAE:", round(mean_absolute_error(y_test, baseline_predictions), 1))`,
+            language: "python",
+            caption: "A mean predictor is the floor to beat",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Baselines make progress measurable",
+            text: "A score alone is hard to judge. The improvement over a baseline tells you whether the model learned useful structure.",
+          },
+        ],
+      },
+      {
+        id: "cross-validation",
+        title: "Average over several folds",
+        blocks: [
+          {
+            type: "text",
+            text: "A single split can be lucky or unlucky. Cross-validation divides the training rows into folds, fits on the other folds, and scores the held-out fold. The mean estimates performance and the spread shows how stable that estimate is.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", Ridge(alpha=1.0)),
+])
+scores = cross_val_score(model, X_train, y_train, cv=5, scoring="r2")
+print("fold scores:", scores.round(3))
+print("mean:       ", scores.mean().round(3))
+print("spread:     ", scores.std().round(3))`,
+            language: "python",
+            caption: "Five estimates from the same training set",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "cross_val_score refits the entire pipeline in every fold, including the scaler. That is why preprocessing belongs inside the pipeline: it prevents each validation fold from seeing its own holdout statistics.",
+          },
+        ],
+      },
+      {
+        id: "negative-scoring",
+        title: "Mind the sign of error scores",
+        blocks: [
+          {
+            type: "text",
+            text: "scikit-learn follows the convention that higher is better. Error metrics such as MAE are therefore exposed as negative scores. Select with scoring=\"neg_mean_absolute_error\" and negate the result for interpretation.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", Ridge(alpha=1.0)),
+])
+
+negative_mae = cross_val_score(
+    model, X_train, y_train, cv=5, scoring="neg_mean_absolute_error"
+)
+print("negative scores:", negative_mae.round(1))
+print("MAE:", round(-negative_mae.mean(), 1))`,
+            language: "python",
+            caption: "Negate negative-error scores before reporting",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Do not compare raw signs",
+            text: "A larger negative MAE is better because it is closer to zero. Sort scores in descending order, or negate them first.",
+          },
+        ],
+      },
+      {
+        id: "overfitting",
+        title: "Compare training and validation",
+        blocks: [
+          {
+            type: "text",
+            text: "A large gap between training and validation performance suggests overfitting. cross_validate can return both scores, which is more informative than a single validation number.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import cross_validate, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", LinearRegression()),
+])
+
+results = cross_validate(
+    model,
+    X_train,
+    y_train,
+    cv=5,
+    scoring="r2",
+    return_train_score=True,
+)
+print("train R2:     ", results["train_score"].mean().round(3))
+print("validation R2:", results["test_score"].mean().round(3))`,
+            language: "python",
+            caption: "Separate memorization from generalization",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "A small gap is healthy. A huge gap with strong training scores means the model is memorizing. A low score in both places usually means the features or model are too weak.",
+          },
+        ],
+      },
+      {
+        id: "test-set-discipline",
+        title: "Protect the final test set",
+        blocks: [
+          {
+            type: "text",
+            text: "Use training data for exploration and cross-validation. Compare models, tune hyperparameters, and choose a preprocessing recipe there. Touch the test set once, after the decisions are made, to estimate final performance.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_diabetes
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", Ridge(alpha=1.0)),
+])
+
+cv_mae = -cross_val_score(
+    model, X_train, y_train, cv=5, scoring="neg_mean_absolute_error"
+).mean()
+model.fit(X_train, y_train)
+test_predictions = model.predict(X_test)
+test_mae = mean_absolute_error(y_test, test_predictions)
+print(f"cross-validated MAE: {cv_mae:.1f}")
+print(f"final test MAE:      {test_mae:.1f}")`,
+            language: "python",
+            caption: "Choose with validation, report once on test",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "A single test number is still noisy",
+            text: "The test estimate is not a guarantee. Report the metric, the split, and the uncertainty you know about rather than implying a level of precision the data cannot support.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "baseline-and-cv",
+        prompt:
+          "Fit DummyRegressor(strategy=\"mean\") on the training rows and store its test MAE in baseline_mae. Build a StandardScaler plus Ridge(alpha=1.0) pipeline, then use 5-fold cross-validation on the training rows with scoring=\"neg_mean_absolute_error\"; store the fold scores in cv_scores and their negated mean in cv_mae.",
+        starterCode: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.dummy import DummyRegressor
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+# Compare the baseline with cross-validated Ridge.
+baseline = None
+baseline_mae = None
+model = None
+cv_scores = None
+cv_mae = None`,
+        tests: [
+          {
+            name: "the baseline is the mean predictor",
+            code: 'import numpy as np\nfrom sklearn.metrics import mean_absolute_error\nassert baseline is not None\nbaseline_predictions = baseline.predict(X_test)\nassert np.isclose(baseline_mae, mean_absolute_error(y_test, baseline_predictions))\nassert 40 < baseline_mae < 90, baseline_mae',
+          },
+          {
+            name: "cross-validation returned five folds",
+            code: 'import numpy as np\nassert cv_scores.shape == (5,), cv_scores.shape\nassert (cv_scores <= 0).all(), cv_scores\nassert np.isclose(cv_mae, -cv_scores.mean())',
+          },
+          {
+            name: "the model beats the baseline",
+            code: 'assert cv_mae > 0\nassert cv_mae < baseline_mae, (cv_mae, baseline_mae)',
+          },
+        ],
+        hints: [
+          "DummyRegressor(strategy=\"mean\") predicts the training target mean.",
+          "Use cross_val_score(model, X_train, y_train, cv=5, scoring=\"neg_mean_absolute_error\"), then cv_mae = -cv_scores.mean().",
+        ],
+        solution: `import numpy as np
+from sklearn.datasets import load_diabetes
+from sklearn.dummy import DummyRegressor
+from sklearn.linear_model import Ridge
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+diabetes = load_diabetes()
+X_train, X_test, y_train, y_test = train_test_split(
+    diabetes.data, diabetes.target, test_size=0.2, random_state=42
+)
+
+baseline = DummyRegressor(strategy="mean")
+baseline.fit(X_train, y_train)
+baseline_predictions = baseline.predict(X_test)
+baseline_mae = mean_absolute_error(y_test, baseline_predictions)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("regress", Ridge(alpha=1.0)),
+])
+cv_scores = cross_val_score(
+    model, X_train, y_train, cv=5, scoring="neg_mean_absolute_error"
+)
+cv_mae = -cv_scores.mean()`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "baseline-purpose",
+        question: "Why compare a model with a mean-prediction baseline?",
+        options: [
+          { id: "earn", label: "It shows whether the model learned useful structure" },
+          { id: "required", label: "It is required by scikit-learn before fitting" },
+          { id: "perfect", label: "It guarantees the model will generalize" },
+        ],
+        answerId: "earn",
+        explanation:
+          "The baseline turns a raw score into an improvement you can judge.",
+      },
+      {
+        id: "neg-mae",
+        question: "Why is neg_mean_absolute_error negative?",
+        options: [
+          { id: "higher", label: "scikit-learn treats higher scores as better" },
+          { id: "bug", label: "It is a bug in the metric" },
+          { id: "units", label: "It changes the target units" },
+        ],
+        answerId: "higher",
+        explanation:
+          "Negating an error metric lets the common higher-is-better convention apply to model selection.",
+      },
+      {
+        id: "test-once",
+        question: "When should the final test set be used?",
+        options: [
+          { id: "final", label: "Once, after model and preprocessing choices are complete" },
+          { id: "every", label: "After every hyperparameter change" },
+          { id: "train", label: "During preprocessing so the scaler sees it" },
+        ],
+        answerId: "final",
+        explanation:
+          "Repeated peeking turns the test set into a tuning set and inflates the reported performance.",
+      },
+    ],
   },
 ];
