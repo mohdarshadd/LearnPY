@@ -2136,5 +2136,990 @@ roc_auc = roc_auc_score(y_test, probabilities[:, 1])`,
           "ROC-AUC summarizes how well positive rows are ranked above negative rows across every cutoff.",
       },
     ],
+    next: {
+      label: "Find structure with clustering",
+      href: "/learn/sklearn/clustering",
+    },
+  },
+  {
+    id: "sklearn-clustering",
+    library: "sklearn",
+    slug: "clustering",
+    title: "Find structure with clustering",
+    summary:
+      "Group unlabeled rows with K-means, scale the features, and judge the result with inertia and silhouette scores.",
+    minutes: 13,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy", "matplotlib"],
+    objectives: [
+      "Distinguish unsupervised clustering from classification.",
+      "Fit K-means inside a scaling pipeline.",
+      "Read centroids and inertia.",
+      "Compare candidate cluster counts with silhouette scores.",
+      "Remember that cluster numbers are arbitrary.",
+    ],
+    sections: [
+      {
+        id: "unlabeled",
+        title: "No labels to copy",
+        blocks: [
+          {
+            type: "text",
+            text: "Clustering looks for groups in unlabeled data. There is no y to fit against. The algorithm proposes structure, and you decide whether that structure is useful for the problem at hand.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import make_blobs
+
+X, true_groups = make_blobs(
+    n_samples=300,
+    centers=4,
+    cluster_std=0.8,
+    random_state=42,
+)
+print("feature matrix:", X.shape)
+print("hidden groups: ", true_groups.shape)
+print("first rows:")
+print(X[:3].round(2))`,
+            language: "python",
+            caption: "Features without a label column",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "true_groups is only for checking",
+            text: "The synthetic dataset includes hidden group IDs so you can sanity-check the result. A real clustering problem gives you only X.",
+          },
+        ],
+      },
+      {
+        id: "kmeans",
+        title: "Let K-means find centers",
+        blocks: [
+          {
+            type: "text",
+            text: "K-means alternates between assigning each row to the nearest centroid and moving each centroid to the mean of its assigned rows. Scaling matters because distance is measured in feature units.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, true_groups = make_blobs(
+    n_samples=300, centers=4, cluster_std=0.8, random_state=42
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("cluster", KMeans(n_clusters=4, n_init=10, random_state=42)),
+])
+labels = model.fit_predict(X)
+kmeans = model.named_steps["cluster"]
+
+print("cluster counts:", np.bincount(labels))
+print("centroids shape:", kmeans.cluster_centers_.shape)
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.scatter(X[:, 0], X[:, 1], c=labels, cmap="viridis", alpha=0.7)
+ax.scatter(
+    kmeans.cluster_centers_[:, 0],
+    kmeans.cluster_centers_[:, 1],
+    color="black",
+    marker="x",
+    s=120,
+)
+ax.set_title("K-means clusters and centers")`,
+            language: "python",
+            caption: "Fit, label, and visualize the clusters",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The centroids above are in scaled space, so their coordinates are not the original feature units. Use model.named_steps[\"scale\"].inverse_transform(...) if you need to map them back.",
+          },
+        ],
+      },
+      {
+        id: "inertia",
+        title: "Inertia rewards tight clusters",
+        blocks: [
+          {
+            type: "text",
+            text: "Inertia is the sum of squared distances from each row to its assigned centroid. It falls as the number of clusters grows, so it cannot choose k by itself. Look for an elbow where extra clusters stop buying much tightness.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, true_groups = make_blobs(
+    n_samples=300, centers=4, cluster_std=0.8, random_state=42
+)
+
+for k in range(2, 8):
+    model = Pipeline([
+        ("scale", StandardScaler()),
+        ("cluster", KMeans(n_clusters=k, n_init=10, random_state=42)),
+    ])
+    model.fit(X)
+    print(f"k={k}: inertia={model.named_steps['cluster'].inertia_:.1f}")`,
+            language: "python",
+            caption: "Inertia always improves as k grows",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "The elbow is a heuristic",
+            text: "Elbows can be ambiguous. Combine inertia with a separation score and with domain knowledge about what a useful group means.",
+          },
+        ],
+      },
+      {
+        id: "silhouette",
+        title: "Measure separation, not just tightness",
+        blocks: [
+          {
+            type: "text",
+            text: "The silhouette score compares each row's average distance to its own cluster with its average distance to the nearest other cluster. Values near 1 mean well-separated groups, near 0 mean overlapping groups, and below 0 suggest possible misassignment.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.metrics import silhouette_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, true_groups = make_blobs(
+    n_samples=300, centers=4, cluster_std=0.8, random_state=42
+)
+
+for k in range(2, 8):
+    model = Pipeline([
+        ("scale", StandardScaler()),
+        ("cluster", KMeans(n_clusters=k, n_init=10, random_state=42)),
+    ])
+    labels = model.fit_predict(X)
+    score = silhouette_score(X, labels)
+    print(f"k={k}: silhouette={score:.3f}")`,
+            language: "python",
+            caption: "Compare separation across candidate cluster counts",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Silhouette is computed on the same X and labels used to fit here, which is fine for exploration. For a performance claim, evaluate on held-out rows or use a stability check across resamples.",
+          },
+        ],
+      },
+      {
+        id: "arbitrary-labels",
+        title: "Cluster numbers are not class names",
+        blocks: [
+          {
+            type: "text",
+            text: "K-means labels are arbitrary identifiers. Cluster 0 in one run can be cluster 3 in another, even when the grouping is identical. Never compare raw cluster IDs across models or treat them as ordered categories.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+
+X, true_groups = make_blobs(
+    n_samples=60, centers=3, cluster_std=1.0, random_state=1
+)
+first = KMeans(n_clusters=3, n_init=10, random_state=1).fit_predict(X)
+second = KMeans(n_clusters=3, n_init=10, random_state=99).fit_predict(X)
+print("first labels: ", np.bincount(first))
+print("second labels:", np.bincount(second))`,
+            language: "python",
+            caption: "The group sizes can match while the IDs differ",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Name clusters after inspection",
+            text: "Profile each cluster's feature means and give it a human-readable description. The numeric ID is a coordinate, not an interpretation.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "blob-clustering",
+        prompt:
+          "Build a StandardScaler plus KMeans(n_clusters=4, n_init=10, random_state=42) pipeline. Store the cluster labels in labels, the inertia in inertia, and the silhouette score in silhouette.",
+        starterCode: `import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.metrics import silhouette_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, true_groups = make_blobs(
+    n_samples=300, centers=4, cluster_std=0.8, random_state=42
+)
+
+# Fit the clustering pipeline.
+model = None
+labels = None
+inertia = None
+silhouette = None`,
+        tests: [
+          {
+            name: "the rows received four cluster labels",
+            code: 'import numpy as np\nassert labels.shape == (300,), labels.shape\nassert len(np.unique(labels)) == 4, np.unique(labels)',
+          },
+          {
+            name: "inertia and silhouette were computed",
+            code: 'import numpy as np\nfrom sklearn.metrics import silhouette_score\nassert inertia > 0, inertia\nassert np.isclose(inertia, model.named_steps["cluster"].inertia_)\nassert -1 <= silhouette <= 1, silhouette\nassert np.isclose(silhouette, silhouette_score(X, labels))',
+          },
+          {
+            name: "the groups are well separated",
+            code: 'assert silhouette > 0.45, silhouette',
+          },
+        ],
+        hints: [
+          "Use model.fit_predict(X) to get labels and model.named_steps[\"cluster\"].inertia_ for inertia.",
+          "Pass the original X and the cluster labels to silhouette_score.",
+        ],
+        solution: `import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.datasets import make_blobs
+from sklearn.metrics import silhouette_score
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+X, true_groups = make_blobs(
+    n_samples=300, centers=4, cluster_std=0.8, random_state=42
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("cluster", KMeans(n_clusters=4, n_init=10, random_state=42)),
+])
+labels = model.fit_predict(X)
+inertia = model.named_steps["cluster"].inertia_
+silhouette = silhouette_score(X, labels)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "unsupervised",
+        question: "What makes clustering unsupervised?",
+        options: [
+          { id: "no-target", label: "It works without a target column" },
+          { id: "no-data", label: "It does not need a feature matrix" },
+          { id: "accuracy", label: "It always has a perfect accuracy score" },
+        ],
+        answerId: "no-target",
+        explanation:
+          "Clustering searches for structure in X without a known y to predict.",
+      },
+      {
+        id: "inertia-k",
+        question: "Why can inertia not choose k on its own?",
+        options: [
+          { id: "falls", label: "It generally falls as more clusters are added" },
+          { id: "negative", label: "It is always negative" },
+          { id: "labels", label: "It requires the true labels" },
+        ],
+        answerId: "falls",
+        explanation:
+          "More centroids can always reduce within-cluster distance, so inertia favors larger k.",
+      },
+      {
+        id: "silhouette",
+        question: "What does a silhouette score near 1 suggest?",
+        options: [
+          { id: "separated", label: "Rows are much closer to their own cluster than to the next one" },
+          { id: "overlap", label: "The clusters heavily overlap" },
+          { id: "wrong", label: "The feature matrix is invalid" },
+        ],
+        answerId: "separated",
+        explanation:
+          "Silhouette compares within-cluster and nearest-other-cluster distances; near 1 means strong separation.",
+      },
+    ],
+    next: {
+      label: "Reduce dimensions with PCA",
+      href: "/learn/sklearn/pca",
+    },
+  },
+  {
+    id: "sklearn-pca",
+    library: "sklearn",
+    slug: "pca",
+    title: "Reduce dimensions with PCA",
+    summary:
+      "Project many correlated features onto a few directions of variance, and read explained variance before trusting the picture.",
+    minutes: 12,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy", "matplotlib"],
+    objectives: [
+      "Explain what principal components represent.",
+      "Scale features before applying PCA.",
+      "Read explained variance ratios.",
+      "Choose a component count from cumulative variance.",
+      "Use a projection for exploration, not as proof of classes.",
+    ],
+    sections: [
+      {
+        id: "directions",
+        title: "Find directions of variance",
+        blocks: [
+          {
+            type: "text",
+            text: "PCA creates new features that are linear combinations of the originals. The first component points in the direction of greatest variance, the second is the next orthogonal direction, and so on. It is unsupervised: no target is involved.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+
+iris = load_iris()
+print("data shape:  ", iris.data.shape)
+print("feature names:", iris.feature_names)
+print("target names:", iris.target_names)`,
+            language: "python",
+            caption: "Four measured features, three species",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "Variance is not importance",
+            text: "PCA preserves variation, not necessarily the signal you care about. A low-variance direction can still separate classes, and a high-variance direction can be noise.",
+          },
+        ],
+      },
+      {
+        id: "scale-first",
+        title: "Scale before projecting",
+        blocks: [
+          {
+            type: "text",
+            text: "PCA is sensitive to feature units. A feature measured in thousands can dominate one measured in fractions. Put StandardScaler before PCA unless the features already share a meaningful scale.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+projection = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA(n_components=2)),
+])
+X_projected = projection.fit_transform(iris.data)
+print("original shape: ", iris.data.shape)
+print("projected shape:", X_projected.shape)
+print("first two rows:")
+print(X_projected[:2].round(2))`,
+            language: "python",
+            caption: "Four features become two components",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "The projected rows keep their row order. PCA changes the columns, not which observation each row represents.",
+          },
+        ],
+      },
+      {
+        id: "explained-variance",
+        title: "Read explained variance",
+        blocks: [
+          {
+            type: "text",
+            text: "explained_variance_ratio_ reports the fraction of total variance captured by each component. The cumulative sum shows how many components are needed for a target amount of variance, such as 95%.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+projection = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA(n_components=2)),
+])
+projection.fit(iris.data)
+pca = projection.named_steps["pca"]
+
+ratios = pca.explained_variance_ratio_
+print("component ratios:", ratios.round(3))
+print("cumulative:      ", np.cumsum(ratios).round(3))`,
+            language: "python",
+            caption: "How much variation each component carries",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Choose components from a purpose",
+            text: "For a two-dimensional exploration, two components are a constraint, not a claim that the data is two-dimensional. For modeling, choose a cumulative-variance target and validate the downstream score.",
+          },
+        ],
+      },
+      {
+        id: "choose-components",
+        title: "Choose a component budget",
+        blocks: [
+          {
+            type: "text",
+            text: "Fit PCA without a component limit to inspect the full spectrum, then pick the smallest number that reaches your target. Keep the target tied to the task rather than automatically using 95%.",
+          },
+          {
+            type: "code",
+            code: `import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(iris.data)
+pca = PCA().fit(X_scaled)
+cumulative = np.cumsum(pca.explained_variance_ratio_)
+
+for target in [0.8, 0.9, 0.95]:
+    count = int(np.searchsorted(cumulative, target) + 1)
+    print(f"{target:.0%} variance needs {count} component(s)")`,
+            language: "python",
+            caption: "Let the cumulative curve set the budget",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "More components preserve more information but give up the compression and visualization benefits. A smaller projection can also discard noise, but it can discard useful signal too.",
+          },
+        ],
+      },
+      {
+        id: "projection-plot",
+        title: "Plot the projection, carefully",
+        blocks: [
+          {
+            type: "text",
+            text: "A two-dimensional projection is useful for seeing broad separation and outliers. Color by a known label only for evaluation; PCA did not use those labels to find the directions.",
+          },
+          {
+            type: "code",
+            code: `import matplotlib.pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+projection = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA(n_components=2)),
+])
+X_projected = projection.fit_transform(iris.data)
+
+fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+for index, name in enumerate(iris.target_names):
+    mask = iris.target == index
+    ax.scatter(
+        X_projected[mask, 0],
+        X_projected[mask, 1],
+        label=name,
+        alpha=0.7,
+    )
+ax.set_title("Iris projected onto two components")
+ax.set_xlabel("Component 1")
+ax.set_ylabel("Component 2")
+ax.legend()`,
+            language: "python",
+            caption: "A projection colored by species after the fact",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "A pretty projection is not a model",
+            text: "Overlap in two dimensions does not prove the classes are inseparable, and clean separation does not guarantee a classifier will generalize.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "iris-pca",
+        prompt:
+          "Build a StandardScaler plus PCA(n_components=2) pipeline and fit_transform iris.data into projected. Store the two explained variance ratios in ratios and their cumulative sum in cumulative.",
+        starterCode: `import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+
+# Scale, project, and inspect the variance.
+projection = None
+projected = None
+ratios = None
+cumulative = None`,
+        tests: [
+          {
+            name: "the data is projected to two components",
+            code: 'import numpy as np\nassert projected.shape == (150, 2), projected.shape\nassert np.isfinite(projected).all()\nassert np.allclose(projected.mean(axis=0), 0, atol=1e-6)',
+          },
+          {
+            name: "the variance ratios are retained",
+            code: 'import numpy as np\nassert ratios.shape == (2,), ratios.shape\nassert np.isclose(ratios.sum(), cumulative[-1])\nassert (ratios > 0).all()',
+          },
+          {
+            name: "the projection keeps most of the variance",
+            code: 'assert cumulative[-1] > 0.9, cumulative[-1]\nassert cumulative[-1] <= 1.0',
+          },
+        ],
+        hints: [
+          "Build Pipeline([(\"scale\", StandardScaler()), (\"pca\", PCA(n_components=2))]).",
+          "Read projection.named_steps[\"pca\"].explained_variance_ratio_, then use np.cumsum.",
+        ],
+        solution: `import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+
+projection = Pipeline([
+    ("scale", StandardScaler()),
+    ("pca", PCA(n_components=2)),
+])
+projected = projection.fit_transform(iris.data)
+ratios = projection.named_steps["pca"].explained_variance_ratio_
+cumulative = np.cumsum(ratios)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "pca-supervised",
+        question: "Does PCA use the target labels to choose components?",
+        options: [
+          { id: "no", label: "No; it is unsupervised" },
+          { id: "yes", label: "Yes; it maximizes class separation" },
+          { id: "sometimes", label: "Only for regression targets" },
+        ],
+        answerId: "no",
+        explanation:
+          "PCA finds directions of variance in X and does not consult y.",
+      },
+      {
+        id: "pca-scale",
+        question: "Why scale features before PCA?",
+        options: [
+          { id: "units", label: "Large-unit features can dominate the variance" },
+          { id: "labels", label: "Scaling creates the class labels" },
+          { id: "required", label: "PCA refuses unscaled input" },
+        ],
+        answerId: "units",
+        explanation:
+          "PCA measures variance, so features with larger numeric ranges can dominate unless they are standardized.",
+      },
+      {
+        id: "cumulative",
+        question: "What does a cumulative explained variance of 0.95 mean?",
+        options: [
+          { id: "variance", label: "The retained components capture 95% of the total variance" },
+          { id: "accuracy", label: "The model has 95% accuracy" },
+          { id: "rows", label: "95% of the rows were removed" },
+        ],
+        answerId: "variance",
+        explanation:
+          "It is the fraction of variance preserved by the selected components, not a predictive score.",
+      },
+    ],
+    next: {
+      label: "Search for better settings",
+      href: "/learn/sklearn/model-selection",
+    },
+  },
+  {
+    id: "sklearn-model-selection",
+    library: "sklearn",
+    slug: "model-selection",
+    title: "Search for better settings",
+    summary:
+      "Tune hyperparameters with cross-validated grid search, keep the test set untouched, and evaluate the winning pipeline once.",
+    minutes: 14,
+    level: "beginner",
+    packages: ["scikit-learn", "numpy"],
+    objectives: [
+      "Explain the difference between parameters and hyperparameters.",
+      "Tune a pipeline with GridSearchCV.",
+      "Use the step__parameter naming convention.",
+      "Read best_params_, best_score_, and best_estimator_.",
+      "Keep the final test score separate from model selection.",
+    ],
+    sections: [
+      {
+        id: "why-search",
+        title: "Settings chosen outside fit",
+        blocks: [
+          {
+            type: "text",
+            text: "A model parameter is learned from training data, such as a linear regression coefficient. A hyperparameter is chosen before fitting, such as the number of neighbors in KNN or the regularization strength in Ridge. Grid search tries combinations and uses cross-validation to compare them.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.2,
+    random_state=42,
+    stratify=iris.target,
+)
+
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier(n_neighbors=5)),
+])
+model.fit(X_train, y_train)
+print("train rows:", X_train.shape[0])
+print("test rows: ", X_test.shape[0])
+print("test accuracy:", model.score(X_test, y_test))`,
+            language: "python",
+            caption: "A baseline with one hand-picked setting",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "warning",
+            title: "Do not tune on the test set",
+            text: "Every time you pick a setting by looking at test performance, the test set leaks into your decisions. Tune with cross-validation on the training rows, then score the final model once on test.",
+          },
+        ],
+      },
+      {
+        id: "grid-search",
+        title: "Search a grid with cross-validation",
+        blocks: [
+          {
+            type: "text",
+            text: "GridSearchCV evaluates every candidate combination with cross-validation. With a pipeline, prefix a step name and two underscores to the parameter name: classify__n_neighbors reaches the classifier inside the pipeline.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.2,
+    random_state=42,
+    stratify=iris.target,
+)
+
+base = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier()),
+])
+search = GridSearchCV(
+    base,
+    {"classify__n_neighbors": [1, 3, 5, 7, 9]},
+    cv=5,
+    scoring="accuracy",
+)
+search.fit(X_train, y_train)
+
+print("best params:", search.best_params_)
+print("best CV score:", round(search.best_score_, 3))`,
+            language: "python",
+            caption: "Five candidates, each scored five times",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "Five candidates with cv=5 means 25 fits, not five. A larger grid multiplies the cost. Start with a small, meaningful range before adding dimensions.",
+          },
+        ],
+      },
+      {
+        id: "read-results",
+        title: "Read the search results",
+        blocks: [
+          {
+            type: "text",
+            text: "best_params_ is the winning combination, best_score_ is its mean cross-validation score, and best_estimator_ is that pipeline refitted on all training rows. The trailing underscores mark attributes learned during fit.",
+          },
+          {
+            type: "code",
+            code: `import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.2, random_state=42, stratify=iris.target
+)
+base = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier()),
+])
+search = GridSearchCV(
+    base,
+    {"classify__n_neighbors": [1, 3, 5, 7, 9]},
+    cv=5,
+    scoring="accuracy",
+)
+search.fit(X_train, y_train)
+
+results = pd.DataFrame(search.cv_results_)
+print(results[["param_classify__n_neighbors", "mean_test_score", "std_test_score"]].round(3))`,
+            language: "python",
+            caption: "Inspect the whole search, not just the winner",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "note",
+            title: "The best score is still an estimate",
+            text: "best_score_ comes from cross-validation and has uncertainty. A small difference between candidates may not survive a different split or more data.",
+          },
+        ],
+      },
+      {
+        id: "final-test",
+        title: "Score the winner once on test",
+        blocks: [
+          {
+            type: "text",
+            text: "After the search, evaluate best_estimator_ on the locked-away test rows. This is the number to report as an estimate of performance on unseen data. Do not go back and tune after seeing it.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.2, random_state=42, stratify=iris.target
+)
+base = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier()),
+])
+search = GridSearchCV(
+    base,
+    {"classify__n_neighbors": [1, 3, 5, 7, 9]},
+    cv=5,
+    scoring="accuracy",
+)
+search.fit(X_train, y_train)
+
+best_cv = search.best_score_
+final_test = search.best_estimator_.score(X_test, y_test)
+print("best CV:   ", round(best_cv, 3))
+print("final test:", round(final_test, 3))
+print("gap:       ", round(best_cv - final_test, 3))`,
+            language: "python",
+            caption: "Keep the selection score and final score distinct",
+            runnable: true,
+          },
+          {
+            type: "text",
+            text: "If the final test score is much worse than the cross-validation score, investigate distribution shift, a small test set, leakage, or too many candidate comparisons. Do not simply rerun the search until the gap looks nice.",
+          },
+        ],
+      },
+      {
+        id: "nested-caution",
+        title: "When search itself needs validation",
+        blocks: [
+          {
+            type: "text",
+            text: "GridSearchCV chooses a winner using the same rows it scores. That winner's cross-validation score is optimistically biased. For a stricter estimate of the entire tuning procedure, use nested cross-validation: tune in an inner loop and score in an outer loop.",
+          },
+          {
+            type: "code",
+            code: `from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+base = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier()),
+])
+search = GridSearchCV(
+    base,
+    {"classify__n_neighbors": [1, 3, 5, 7, 9]},
+    cv=3,
+    scoring="accuracy",
+)
+outer_scores = cross_val_score(search, iris.data, iris.target, cv=5)
+print("outer scores:", outer_scores.round(3))
+print("mean:        ", round(outer_scores.mean(), 3))`,
+            language: "python",
+            caption: "Tune inside each outer fold",
+            runnable: true,
+          },
+          {
+            type: "callout",
+            tone: "tip",
+            title: "Start simple",
+            text: "A small grid, a sensible metric, and a pipeline are usually enough. Add search dimensions only when you can explain what each one should change.",
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        id: "knn-grid-search",
+        prompt:
+          "Using the provided split, build a StandardScaler plus KNeighborsClassifier pipeline and tune classify__n_neighbors over [1, 3, 5, 7] with GridSearchCV(cv=5, scoring=\"accuracy\"). Store the fitted search in search, its winning parameters in best_params, its mean CV score in best_score, and its test accuracy in test_accuracy.",
+        starterCode: `from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.2,
+    random_state=42,
+    stratify=iris.target,
+)
+
+# Build, tune, and evaluate the pipeline.
+base = None
+search = None
+best_params = None
+best_score = None
+test_accuracy = None`,
+        tests: [
+          {
+            name: "the search evaluated the requested neighbors",
+            code: 'assert search.best_params_["classify__n_neighbors"] in [1, 3, 5, 7]\nassert best_params == search.best_params_\nassert search.param_grid == {"classify__n_neighbors": [1, 3, 5, 7]}\nassert search.cv == 5',
+          },
+          {
+            name: "the winning pipeline was fitted and scored",
+            code: 'assert 0 <= best_score <= 1, best_score\nassert best_score == search.best_score_\nassert 0 <= test_accuracy <= 1, test_accuracy\nassert abs(test_accuracy - search.best_estimator_.score(X_test, y_test)) < 1e-12',
+          },
+          {
+            name: "the tuned model generalizes well",
+            code: 'assert test_accuracy >= 0.9, test_accuracy\nassert best_score >= 0.9, best_score',
+          },
+        ],
+        hints: [
+          "The parameter key must be classify__n_neighbors because classify is the pipeline step name.",
+          "Call search.fit(X_train, y_train); then use search.best_params_, search.best_score_, and search.best_estimator_.score(X_test, y_test).",
+        ],
+        solution: `from sklearn.datasets import load_iris
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.2,
+    random_state=42,
+    stratify=iris.target,
+)
+
+base = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", KNeighborsClassifier()),
+])
+search = GridSearchCV(
+    base,
+    {"classify__n_neighbors": [1, 3, 5, 7]},
+    cv=5,
+    scoring="accuracy",
+)
+search.fit(X_train, y_train)
+best_params = search.best_params_
+best_score = search.best_score_
+test_accuracy = search.best_estimator_.score(X_test, y_test)`,
+        packages: [],
+      },
+    ],
+    quiz: [
+      {
+        id: "hyperparameter",
+        question: "Which value is a hyperparameter?",
+        options: [
+          { id: "neighbors", label: "The number of neighbors in KNN" },
+          { id: "intercept", label: "A fitted linear regression intercept" },
+          { id: "prediction", label: "A predicted probability for one row" },
+        ],
+        answerId: "neighbors",
+        explanation:
+          "The neighbor count is chosen before fitting; the intercept is learned from the training data.",
+      },
+      {
+        id: "pipeline-param",
+        question: "How do you tune n_neighbors inside a pipeline step named classify?",
+        options: [
+          { id: "double", label: "Use classify__n_neighbors" },
+          { id: "dot", label: "Use classify.n_neighbors" },
+          { id: "plain", label: "Use n_neighbors without a prefix" },
+        ],
+        answerId: "double",
+        explanation:
+          "Grid search uses step__parameter with two underscores to address a nested pipeline parameter.",
+      },
+      {
+        id: "test-lock",
+        question: "When should the test set be used during grid search?",
+        options: [
+          { id: "after", label: "After tuning, to score the winner once" },
+          { id: "every", label: "For every candidate combination" },
+          { id: "never", label: "It should never be used" },
+        ],
+        answerId: "after",
+        explanation:
+          "The test set stays out of model selection and provides a final, less biased estimate.",
+      },
+    ],
   },
 ];
