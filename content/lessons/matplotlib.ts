@@ -1352,5 +1352,9 @@ for side in ["top", "right"]:
           "The context manager restores the previous style after the block, which avoids leaking settings into later figures.",
       },
     ],
+    next: {
+      label: "Start with the scikit-learn API",
+      href: "/learn/sklearn/workflow",
+    },
   },
 ];
