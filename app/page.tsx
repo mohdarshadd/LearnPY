@@ -322,6 +322,12 @@ export default function Home() {
               >
                 Browse reference
               </Link>
+              <Link
+                href="/capstone"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-paper transition-colors hover:bg-white/10"
+              >
+                Try the capstone
+              </Link>
             </div>
           </div>
         </div>

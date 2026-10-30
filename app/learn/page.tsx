@@ -114,7 +114,35 @@ export default function LearnPage() {
           ))}
         </div>
 
-        <div className="mt-12 grid gap-6 rounded-[1.25rem] border border-line bg-paper-deep/50 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
+        <Link
+          href="/capstone"
+          className="group mt-5 flex flex-col gap-5 overflow-hidden rounded-[1.25rem] border border-ink/15 bg-ink p-6 text-paper transition-colors hover:bg-ink-soft sm:p-8 md:flex-row md:items-center md:justify-between"
+        >
+          <div className="max-w-2xl">
+            <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-acid">
+              The capstone
+            </p>
+            <h2 className="mt-2 text-xl font-semibold tracking-tight">
+              Connect all four libraries in one notebook.
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-paper/60">
+              Load and audit a table, plot the evidence, fit a pipeline, and
+              evaluate it against a baseline. Seven runnable cells, one shared
+              Python session.
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-acid px-5 py-2.5 text-sm font-semibold text-acid-ink">
+            Open the capstone
+            <span
+              aria-hidden="true"
+              className="transition-transform group-hover:translate-x-1"
+            >
+              &rarr;
+            </span>
+          </span>
+        </Link>
+
+        <div className="mt-5 grid gap-6 rounded-[1.25rem] border border-line bg-paper-deep/50 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
               Not sure where to begin?

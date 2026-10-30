@@ -15,6 +15,7 @@ const columns = [
     title: "Practice",
     links: [
       { href: "/playground", label: "Playground" },
+      { href: "/capstone", label: "Capstone" },
       { href: "/reference", label: "Reference" },
       { href: "/progress", label: "Progress" },
     ],
