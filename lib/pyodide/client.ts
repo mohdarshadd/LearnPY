@@ -75,12 +75,23 @@ export class PyodideRunner {
 
     if (this.pendingRun) {
       clearTimeout(this.pendingRun.timer);
+      const pending = this.pendingRun;
       this.pendingRun = null;
+      pending.resolve({
+        ...emptyResult(pending.id, pending.startedAt),
+        error: {
+          kind: "internal",
+          name: "RunnerDisposed",
+          message: "The Python session was closed before the run finished.",
+        },
+      });
     }
 
     if (this.pendingReset) {
       clearTimeout(this.pendingReset.timer);
+      const pending = this.pendingReset;
       this.pendingReset = null;
+      pending.resolve(false);
     }
   }
 

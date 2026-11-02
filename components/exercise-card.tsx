@@ -9,110 +9,25 @@ import type {
   ExecutionResult,
   PyodideState,
 } from "@/lib/pyodide/protocol";
+import {
+  buildTestScript,
+  parseTestOutput,
+  type TestResult,
+} from "@/lib/practice/test-harness";
 import { cn } from "@/lib/cn";
-
-const TEST_MARKER = "__LEARNPY_TESTS__";
-
-type TestResult = {
-  name: string;
-  passed: boolean;
-  message: string;
-};
 
 type ExerciseCardProps = {
   exercise: Exercise;
   lessonPackages?: string[];
+  compact?: boolean;
+  mode?: "build" | "fix";
 };
-
-function buildTestScript(exercise: Exercise, source: string) {
-  const lines = [
-    source.trimEnd(),
-    "",
-    "import json as _learnpy_exercise_json",
-    "_learnpy_exercise_results = []",
-  ];
-
-  for (const test of exercise.tests) {
-    lines.push("try:");
-
-    for (const line of test.code.replace(/\r\n/g, "\n").split("\n")) {
-      lines.push(`    ${line}`);
-    }
-
-    lines.push(
-      `    _learnpy_exercise_results.append({"name": ${JSON.stringify(test.name)}, "passed": True, "message": ""})`,
-      "except Exception as _learnpy_exercise_error:",
-      `    _learnpy_exercise_results.append({"name": ${JSON.stringify(test.name)}, "passed": False, "message": f"{type(_learnpy_exercise_error).__name__}: {_learnpy_exercise_error}"})`,
-    );
-  }
-
-  lines.push(
-    `print(${JSON.stringify(TEST_MARKER)} + _learnpy_exercise_json.dumps(_learnpy_exercise_results))`,
-  );
-
-  return lines.join("\n");
-}
-
-function parseTestOutput(stdout: string): {
-  results: TestResult[] | null;
-  stdout: string;
-} {
-  const lines = stdout.split("\n");
-  let markerIndex = -1;
-
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    if (lines[index].startsWith(TEST_MARKER)) {
-      markerIndex = index;
-      break;
-    }
-  }
-
-  if (markerIndex === -1) {
-    return { results: null, stdout };
-  }
-
-  const payload = lines[markerIndex].slice(TEST_MARKER.length);
-
-  try {
-    const parsed: unknown = JSON.parse(payload);
-
-    if (!Array.isArray(parsed)) {
-      return { results: null, stdout };
-    }
-
-    const results: TestResult[] = [];
-
-    for (const item of parsed) {
-      if (
-        typeof item === "object" &&
-        item !== null &&
-        "name" in item &&
-        "passed" in item &&
-        "message" in item &&
-        typeof item.name === "string" &&
-        typeof item.passed === "boolean" &&
-        typeof item.message === "string"
-      ) {
-        results.push({
-          name: item.name,
-          passed: item.passed,
-          message: item.message,
-        });
-      }
-    }
-
-    return {
-      results,
-      stdout: lines.filter((_, index) => index !== markerIndex).join("\n").trimEnd(),
-    };
-  } catch {
-    return { results: null, stdout };
-  }
-}
 
 export function ExerciseCard({
   exercise,
   lessonPackages = [],
+  compact = false,
+  mode = "build",
 }: ExerciseCardProps) {
   const packages = Array.from(
     new Set([...lessonPackages, ...exercise.packages]),
@@ -127,6 +42,9 @@ export function ExerciseCard({
   const [bootError, setBootError] = useState<string | null>(null);
   const [hintsShown, setHintsShown] = useState(0);
   const [solutionVisible, setSolutionVisible] = useState(false);
+  const [draftBeforeSolution, setDraftBeforeSolution] = useState<string | null>(
+    null,
+  );
 
   const runnerRef = useRef<PyodideRunnerClient | null>(null);
   const runnerPromiseRef = useRef<Promise<PyodideRunnerClient> | null>(null);
@@ -258,6 +176,30 @@ export function ExerciseCard({
     }
   };
 
+  const handleSourceChange = (value: string) => {
+    setSource(value);
+    setResult(null);
+    setTestResults(null);
+    setBootError(null);
+  };
+
+  const handleSolutionToggle = () => {
+    if (solutionVisible) {
+      setSource(draftBeforeSolution ?? exercise.starterCode);
+      setDraftBeforeSolution(null);
+      setSolutionVisible(false);
+      setResult(null);
+      setTestResults(null);
+      return;
+    }
+
+    setDraftBeforeSolution(source);
+    setSource(exercise.solution);
+    setSolutionVisible(true);
+    setResult(null);
+    setTestResults(null);
+  };
+
   const loadingDetail = status === "loading" ? statusDetail : undefined;
   const isRunning = busy || status === "running";
   const passedCount = testResults?.filter((test) => test.passed).length ?? 0;
@@ -269,19 +211,32 @@ export function ExerciseCard({
       className="overflow-hidden rounded-[1.25rem] border border-line bg-surface"
       id={exercise.id}
     >
-      <div className="border-b border-line px-5 py-4 sm:px-6">
+      <div
+        className={cn(
+          "border-b border-line",
+          compact ? "px-4 py-3" : "px-5 py-4 sm:px-6",
+        )}
+      >
         <p className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted">
-          Exercise
+          {mode === "fix" ? "Bug hunt" : compact ? "Try it" : "Exercise"}
         </p>
         <h3
-          className="mt-1.5 text-lg font-semibold tracking-tight"
+          className={cn(
+            "mt-1.5 font-semibold tracking-tight",
+            compact ? "text-base" : "text-lg",
+          )}
           id={`${exercise.id}-heading`}
         >
           {exercise.prompt}
         </h3>
       </div>
 
-      <div className="grid gap-4 px-5 py-5 sm:px-6">
+      <div
+        className={cn(
+          "grid gap-4",
+          compact ? "px-4 py-4" : "px-5 py-5 sm:px-6",
+        )}
+      >
         <div className="overflow-hidden rounded-[1.15rem] border border-ink/20 bg-ink text-paper">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <p className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-paper/45">
@@ -312,8 +267,8 @@ export function ExerciseCard({
           >
             <PythonEditor
               ariaLabel={`Python code editor for ${exercise.prompt}`}
-              height={220}
-              onChange={setSource}
+              height={compact ? 160 : 220}
+              onChange={handleSourceChange}
               value={source}
             />
           </div>
@@ -439,18 +394,10 @@ export function ExerciseCard({
           ) : null}
           <button
             className="rounded-full border border-line bg-paper px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30"
-            onClick={() => {
-              if (solutionVisible) {
-                setSource(exercise.starterCode);
-              } else {
-                setSource(exercise.solution);
-              }
-
-              setSolutionVisible((visible) => !visible);
-            }}
+            onClick={handleSolutionToggle}
             type="button"
           >
-            {solutionVisible ? "Restore starter code" : "Show solution"}
+            {solutionVisible ? "Restore your draft" : "Show solution"}
           </button>
         </div>
 
