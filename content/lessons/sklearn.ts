@@ -847,7 +847,36 @@ print("test rows:  ", len(predictions))`,
           },
           {
             type: "text",
-            text: "Calling model.score on a regressor returns R² by default. That is useful, but it is not the whole story. A model can have a respectable R² and still make errors that are too large for the decision at hand.",
+            text: "Calling model.score on a regressor returns RA� by default. That is useful, but it is not the whole story. A model can have a respectable RA� and still make errors that are too large for the decision at hand.",
+          },
+          {
+            type: "lab",
+            id: "lab-fix-mae",
+            mode: "fix",
+            prompt:
+              "This mean absolute error implementation forgot the absolute value. Fix it so positive and negative misses cannot cancel.",
+            starterCode: `actual = [3.0, 5.0, 7.0, 9.0]
+predicted = [2.5, 5.5, 6.0, 10.0]
+
+# Bug: signed errors can cancel each other out.
+errors = [a - p for a, p in zip(actual, predicted)]
+mae = sum(errors) / len(errors)`,
+            tests: [
+              {
+                name: "mae matches sklearn",
+                code: 'from sklearn.metrics import mean_absolute_error\nassert abs(mae - mean_absolute_error(actual, predicted)) < 1e-12, mae',
+              },
+            ],
+            hints: [
+              "Mean absolute error keeps only the size of each miss.",
+              "Apply abs() to every error before summing.",
+            ],
+            solution: `actual = [3.0, 5.0, 7.0, 9.0]
+predicted = [2.5, 5.5, 6.0, 10.0]
+
+errors = [abs(a - p) for a, p in zip(actual, predicted)]
+mae = sum(errors) / len(errors)`,
+            packages: [],
           },
         ],
       },
