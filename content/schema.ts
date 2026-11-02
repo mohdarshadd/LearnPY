@@ -21,6 +21,60 @@ export function isLibraryId(value: string): value is LibraryId {
   return (libraryIds as readonly string[]).includes(value);
 }
 
+export const exerciseSchema = z.object({
+  id: z.string().min(1),
+  prompt: z.string().min(1),
+  starterCode: z.string().min(1),
+  tests: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        code: z.string().min(1),
+      }),
+    )
+    .min(1),
+  hints: z.array(z.string()).default([]),
+  solution: z.string().min(1),
+  packages: z.array(z.string()).default([]),
+});
+
+export type Exercise = z.infer<typeof exerciseSchema>;
+
+export const inlineLabSchema = exerciseSchema.extend({
+  type: z.literal("lab"),
+  mode: z.enum(["build", "fix"]).default("build"),
+});
+
+export type InlineLab = z.infer<typeof inlineLabSchema>;
+
+export const predictCheckSchema = z
+  .object({
+    type: z.literal("predict"),
+    id: z.string().min(1),
+    question: z.string().min(1),
+    code: z.string().optional(),
+    options: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+        }),
+      )
+      .min(2),
+    answerId: z.string().min(1),
+    explanation: z.string().min(1),
+  })
+  .superRefine((check, ctx) => {
+    if (!check.options.some((option) => option.id === check.answerId)) {
+      ctx.addIssue({
+        code: "custom",
+        message: `answerId "${check.answerId}" does not match any option.`,
+      });
+    }
+  });
+
+export type PredictCheck = z.infer<typeof predictCheckSchema>;
+
 const tableSchema = z
   .object({
     type: z.literal("table"),
@@ -63,6 +117,8 @@ export const contentBlockSchema = z.discriminatedUnion("type", [
     ordered: z.boolean().default(false),
     items: z.array(z.string().min(1)).min(1),
   }),
+  inlineLabSchema,
+  predictCheckSchema,
   tableSchema,
 ]);
 
@@ -75,25 +131,6 @@ export const lessonSectionSchema = z.object({
 });
 
 export type LessonSection = z.infer<typeof lessonSectionSchema>;
-
-export const exerciseSchema = z.object({
-  id: z.string().min(1),
-  prompt: z.string().min(1),
-  starterCode: z.string().min(1),
-  tests: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        code: z.string().min(1),
-      }),
-    )
-    .min(1),
-  hints: z.array(z.string()).default([]),
-  solution: z.string().min(1),
-  packages: z.array(z.string()).default([]),
-});
-
-export type Exercise = z.infer<typeof exerciseSchema>;
 
 export const quizQuestionSchema = z
   .object({
