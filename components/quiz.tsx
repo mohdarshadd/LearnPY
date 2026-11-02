@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { QuizQuestion } from "@/content/schema";
 import { cn } from "@/lib/cn";
 
@@ -9,8 +9,10 @@ type QuizProps = {
 };
 
 export function Quiz({ questions }: QuizProps) {
+  const baseId = useId();
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const headingId = `${baseId}-heading`;
 
   if (questions.length === 0) {
     return null;
@@ -26,9 +28,9 @@ export function Quiz({ questions }: QuizProps) {
 
   return (
     <section
-      aria-labelledby="quiz-heading"
+      aria-labelledby={headingId}
       className="rounded-[1.25rem] border border-line bg-surface p-5 sm:p-6"
-      id="quiz"
+      id={baseId}
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -37,7 +39,7 @@ export function Quiz({ questions }: QuizProps) {
           </p>
           <h3
             className="mt-1.5 text-lg font-semibold tracking-tight"
-            id="quiz-heading"
+            id={headingId}
           >
             Check your understanding
           </h3>
