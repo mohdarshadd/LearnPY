@@ -2,6 +2,8 @@ import type { ContentBlock } from "@/content/schema";
 import { cn } from "@/lib/cn";
 import { CodeBlock } from "@/components/code-block";
 import { CodeRunner } from "@/components/code-runner";
+import { ExerciseCard } from "@/components/exercise-card";
+import { PredictCheck } from "@/components/predict-check";
 
 const calloutStyles = {
   note: {
@@ -115,6 +117,20 @@ export function ContentBlocks({ blocks, packages = [] }: ContentBlocksProps) {
               </ListTag>
             );
           }
+
+          case "lab":
+            return (
+              <ExerciseCard
+                compact
+                exercise={block}
+                key={block.id}
+                lessonPackages={packages}
+                mode={block.mode}
+              />
+            );
+
+          case "predict":
+            return <PredictCheck check={block} key={block.id} />;
 
           case "table":
             return (
