@@ -54,6 +54,23 @@ print(round(accuracy, 3))`,
             runnable: true,
           },
           {
+            type: "predict",
+            id: "predict-predict-output",
+            question:
+              "After model.fit(X_train, y_train), what does model.predict(X_test) return?",
+            options: [
+              { id: "labels", label: "One predicted class label per test row" },
+              {
+                id: "probabilities",
+                label: "One probability per class for every test row",
+              },
+              { id: "accuracy", label: "A single accuracy score" },
+            ],
+            answerId: "labels",
+            explanation:
+              "predict returns the selected output for each row. Use predict_proba when you want class probabilities, and score when you want a metric.",
+          },
+          {
             type: "callout",
             tone: "tip",
             title: "The names carry meaning",
@@ -99,6 +116,65 @@ print("test class counts: ", y_test.sum())`,
               "stratify=iris.target keeps the class proportions in both splits.",
               "Keep X_test and y_test untouched until the final evaluation.",
             ],
+          },
+          {
+            type: "lab",
+            id: "lab-split-before-scaling",
+            mode: "build",
+            prompt:
+              "Split the iris data first, then fit a StandardScaler on the training rows only. Report the training and test row counts.",
+            starterCode: `from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.25,
+    random_state=7,
+    stratify=iris.target,
+)
+
+# Fit the scaler on X_train only, then transform both splits.
+X_train_scaled = ...
+X_test_scaled = ...
+train_rows = ...
+test_rows = ...`,
+            tests: [
+              {
+                name: "the scaler was fitted on training rows only",
+                code: 'assert X_train_scaled.shape == X_train.shape\nassert X_test_scaled.shape == X_test.shape\nassert abs(X_train_scaled.mean(axis=0)).max() < 1e-9',
+              },
+              {
+                name: "the row counts are reported",
+                code: "assert train_rows == 112, train_rows\nassert test_rows == 38, test_rows",
+              },
+            ],
+            hints: [
+              "Create scaler = StandardScaler(), call scaler.fit(X_train), then transform each split.",
+              "Assign train_rows = X_train.shape[0] and test_rows = X_test.shape[0].",
+            ],
+            solution: `from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data,
+    iris.target,
+    test_size=0.25,
+    random_state=7,
+    stratify=iris.target,
+)
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train_scaled = scaler.transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+train_rows = X_train.shape[0]
+test_rows = X_test.shape[0]`,
+            packages: [],
           },
         ],
       },
@@ -1833,6 +1909,65 @@ print("TN, FP, FN, TP:", tn, fp, fn, tp)`,
             tone: "note",
             title: "Rows are actual, columns are predicted",
             text: "With labels [0, 1], the matrix is [[TN, FP], [FN, TP]]. Read the axes before interpreting the numbers.",
+          },
+          {
+            type: "lab",
+            id: "lab-fix-recall",
+            mode: "fix",
+            prompt:
+              "This recall calculation uses the wrong denominator. Fix it so recall matches scikit-learn's recall_score.",
+            starterCode: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
+
+# Bug: this denominator measures precision, not recall.
+recall = tp / (tp + fp)`,
+            tests: [
+              {
+                name: "recall matches the sklearn metric",
+                code: 'from sklearn.metrics import recall_score\nassert abs(recall - recall_score(y_test, predictions)) < 1e-12, recall',
+              },
+            ],
+            hints: [
+              "Recall is the share of actual positives that were found.",
+              "The denominator should include false negatives, not false positives.",
+            ],
+            solution: `from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(
+    cancer.data, cancer.target, test_size=0.2, random_state=42, stratify=cancer.target
+)
+model = Pipeline([
+    ("scale", StandardScaler()),
+    ("classify", LogisticRegression(max_iter=1000)),
+])
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+tn, fp, fn, tp = confusion_matrix(y_test, predictions).ravel()
+
+recall = tp / (tp + fn)`,
+            packages: [],
           },
         ],
       },

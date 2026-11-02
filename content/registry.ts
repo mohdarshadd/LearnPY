@@ -73,6 +73,22 @@ function parseLessons(items: unknown[]): Lesson[] {
       exerciseIds.add(exercise.id);
     }
 
+    for (const section of lesson.sections) {
+      for (const block of section.blocks) {
+        if (block.type !== "lab" && block.type !== "predict") {
+          continue;
+        }
+
+        if (exerciseIds.has(block.id)) {
+          throw new Error(
+            `Duplicate practice id "${block.id}" in lesson "${lesson.id}".`,
+          );
+        }
+
+        exerciseIds.add(block.id);
+      }
+    }
+
     ids.add(lesson.id);
     routes.add(route);
   }
@@ -109,6 +125,16 @@ function parseReferences(items: unknown[]): Reference[] {
 
     ids.add(reference.id);
     routes.add(route);
+  }
+
+  for (const reference of references) {
+    for (const relatedId of reference.related) {
+      if (!ids.has(relatedId)) {
+        throw new Error(
+          `Reference "${reference.id}" points to missing related id "${relatedId}".`,
+        );
+      }
+    }
   }
 
   return references;
