@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PythonEditor } from "@/components/python-editor";
 import { RunnerOutput } from "@/components/runner-output";
 import { cn } from "@/lib/cn";
+import { practiceChallenges } from "@/content/practice/challenges";
 import { takePracticeHandoff } from "@/lib/practice/handoff";
 import type { PyodideRunner as PyodideRunnerClient } from "@/lib/pyodide/client";
 import type {
@@ -97,6 +98,16 @@ const packageOptions = [
   { id: "sklearn", label: "scikit-learn" },
 ];
 
+const presetIds = [
+  "numpy-even-mask",
+  "pandas-groupby-mean",
+  "sklearn-classify",
+];
+
+const practicePresets = practiceChallenges.filter((challenge) =>
+  presetIds.includes(challenge.id),
+);
+
 const STORAGE_KEY = "learnpy-playground-v1";
 const knownPackages = new Set(packageOptions.map((option) => option.id));
 
@@ -156,6 +167,7 @@ export function Playground() {
   const [copied, setCopied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [handoffTitle, setHandoffTitle] = useState<string | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
 
   const runnerRef = useRef<PyodideRunnerClient | null>(null);
   const runnerPromiseRef = useRef<Promise<PyodideRunnerClient> | null>(null);
@@ -336,6 +348,20 @@ export function Playground() {
     setCopied(false);
   };
 
+  const handlePreset = (preset: (typeof practicePresets)[number]) => {
+    if (busyRef.current) {
+      return;
+    }
+
+    setSource(preset.starterCode);
+    setPackages(preset.packages);
+    setActiveExample(null);
+    setHandoffTitle(preset.title);
+    setResult(null);
+    setBootError(null);
+    setCopied(false);
+  };
+
   const handleClear = () => {
     if (busyRef.current) {
       return;
@@ -380,7 +406,14 @@ export function Playground() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
+      <div
+        className={cn(
+          "grid gap-6 lg:items-start",
+          focusMode
+            ? "mx-auto max-w-5xl"
+            : "lg:grid-cols-[minmax(0,1fr)_280px]",
+        )}
+      >
         <section
           aria-label="Python playground"
           className="overflow-hidden rounded-[1.25rem] border border-ink/20 bg-ink text-paper shadow-[0_18px_40px_-30px_rgba(16,20,15,0.9)]"
@@ -469,6 +502,19 @@ export function Playground() {
             >
               {copied ? "Copied" : "Copy"}
             </button>
+            <button
+              aria-pressed={focusMode}
+              className={cn(
+                "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
+                focusMode
+                  ? "border-acid/50 bg-acid/10 text-acid"
+                  : "border-white/20 text-paper/75 hover:border-white/35 hover:text-paper",
+              )}
+              onClick={() => setFocusMode((active) => !active)}
+              type="button"
+            >
+              {focusMode ? "Exit focus" : "Focus mode"}
+            </button>
             <p className="ml-auto hidden font-mono text-[0.6rem] uppercase tracking-[0.12em] text-paper/35 sm:block">
               Ctrl / &#8984; + Enter
             </p>
@@ -513,6 +559,7 @@ export function Playground() {
           </div>
         </section>
 
+        {!focusMode ? (
         <aside className="space-y-4 lg:sticky lg:top-24">
           <section
             aria-labelledby="playground-examples"
@@ -550,6 +597,34 @@ export function Playground() {
                     )}
                   >
                     {example.blurb}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section
+            aria-labelledby="playground-presets"
+            className="rounded-[1.25rem] border border-line bg-surface p-5"
+          >
+            <h2
+              className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-muted"
+              id="playground-presets"
+            >
+              Challenge presets
+            </h2>
+            <div className="mt-3 space-y-2">
+              {practicePresets.map((preset) => (
+                <button
+                  className="w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-left text-sm font-semibold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+                  disabled={busy}
+                  key={preset.id}
+                  onClick={() => handlePreset(preset)}
+                  type="button"
+                >
+                  {preset.title}
+                  <span className="mt-0.5 block text-xs font-normal text-muted">
+                    {preset.summary}
                   </span>
                 </button>
               ))}
@@ -607,6 +682,7 @@ export function Playground() {
             </Link>
           </section>
         </aside>
+        ) : null}
       </div>
     </div>
   );
