@@ -21,6 +21,7 @@ type ExerciseCardProps = {
   lessonPackages?: string[];
   compact?: boolean;
   mode?: "build" | "fix";
+  onPassed?: () => void;
 };
 
 export function ExerciseCard({
@@ -28,6 +29,7 @@ export function ExerciseCard({
   lessonPackages = [],
   compact = false,
   mode = "build",
+  onPassed,
 }: ExerciseCardProps) {
   const packages = Array.from(
     new Set([...lessonPackages, ...exercise.packages]),
@@ -111,6 +113,14 @@ export function ExerciseCard({
       if (!disposedRef.current) {
         setResult({ ...nextResult, stdout: parsed.stdout });
         setTestResults(parsed.results);
+
+        if (
+          parsed.results &&
+          parsed.results.length > 0 &&
+          parsed.results.every((test) => test.passed)
+        ) {
+          onPassed?.();
+        }
       }
     } catch (error) {
       runnerPromiseRef.current = null;
@@ -127,7 +137,7 @@ export function ExerciseCard({
         setBusy(false);
       }
     }
-  }, [exercise, getRunner, packages, source]);
+  }, [exercise, getRunner, onPassed, packages, source]);
 
   const handleReset = useCallback(async () => {
     if (busyRef.current) {

@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { ExerciseCard } from "@/components/exercise-card";
 import type { Challenge } from "@/content/practice/schema";
 import { cn } from "@/lib/cn";
-import { getDailyChallenge } from "@/lib/practice/daily";
+import { getDailyChallenge, localDateKey } from "@/lib/practice/daily";
 import { savePracticeHandoff } from "@/lib/practice/handoff";
+import { useProgressStore } from "@/lib/progress/store";
+import { useProgressHydrated } from "@/lib/progress/use-progress";
 
 type PracticeHubProps = {
   challenges: Challenge[];
@@ -19,6 +21,13 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
   const [difficulty, setDifficulty] = useState("all");
   const [topic, setTopic] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const hydrated = useProgressHydrated();
+  const completedChallengeIds = useProgressStore(
+    (state) => state.completedChallengeIds,
+  );
+  const markChallengeComplete = useProgressStore(
+    (state) => state.markChallengeComplete,
+  );
   const dailyChallenge = useMemo(
     () => getDailyChallenge(challenges),
     [challenges],
@@ -102,6 +111,12 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted" role="status">
             {filtered.length} challenge{filtered.length === 1 ? "" : "s"} match.
+            {hydrated ? (
+              <>
+                {" "}
+                {completedChallengeIds.length} of {challenges.length} cleared.
+              </>
+            ) : null}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -143,6 +158,9 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
                   {challenge.difficulty}
                 </span>
                 <span className="text-[0.68rem] text-muted">
+                  {hydrated && completedChallengeIds.includes(challenge.id)
+                    ? "Cleared · "
+                    : ""}
                   {challenge.topics.join(" / ")}
                 </span>
               </div>
@@ -164,7 +182,12 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
         <div className="lg:sticky lg:top-24">
           {selected ? (
             <div>
-              <ExerciseCard exercise={selected} />
+              <ExerciseCard
+                exercise={selected}
+                onPassed={() =>
+                  markChallengeComplete(selected.id, localDateKey(new Date()))
+                }
+              />
               <div className="mt-3 flex flex-wrap items-center gap-4">
                 <Link
                   className="inline-flex text-sm font-semibold text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
