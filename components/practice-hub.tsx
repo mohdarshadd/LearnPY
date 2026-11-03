@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExerciseCard } from "@/components/exercise-card";
 import type { Challenge } from "@/content/practice/schema";
 import { cn } from "@/lib/cn";
+import { getDailyChallenge } from "@/lib/practice/daily";
 
 type PracticeHubProps = {
   challenges: Challenge[];
@@ -15,6 +16,10 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
   const [difficulty, setDifficulty] = useState("all");
   const [topic, setTopic] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const dailyChallenge = useMemo(
+    () => getDailyChallenge(challenges),
+    [challenges],
+  );
 
   const filtered = useMemo(
     () =>
@@ -71,9 +76,20 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
             </button>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted" role="status">
-          {filtered.length} challenge{filtered.length === 1 ? "" : "s"} match.
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted" role="status">
+            {filtered.length} challenge{filtered.length === 1 ? "" : "s"} match.
+          </p>
+          {dailyChallenge ? (
+            <button
+              className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-paper transition-colors hover:bg-ink-soft"
+              onClick={() => setSelectedId(dailyChallenge.id)}
+              type="button"
+            >
+              Start today&apos;s drill
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
