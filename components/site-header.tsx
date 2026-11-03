@@ -10,6 +10,7 @@ import {
 
 const links = [
   { href: "/learn", label: "Learn" },
+  { href: "/practice", label: "Practice" },
   { href: "/reference", label: "Reference" },
   { href: "/playground", label: "Playground" },
   { href: "/capstone", label: "Capstone" },
