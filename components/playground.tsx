@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PythonEditor } from "@/components/python-editor";
 import { RunnerOutput } from "@/components/runner-output";
 import { cn } from "@/lib/cn";
+import { takePracticeHandoff } from "@/lib/practice/handoff";
 import type { PyodideRunner as PyodideRunnerClient } from "@/lib/pyodide/client";
 import type {
   ExecutionResult,
@@ -154,6 +155,7 @@ export function Playground() {
   const [bootError, setBootError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [handoffTitle, setHandoffTitle] = useState<string | null>(null);
 
   const runnerRef = useRef<PyodideRunnerClient | null>(null);
   const runnerPromiseRef = useRef<Promise<PyodideRunnerClient> | null>(null);
@@ -168,12 +170,23 @@ export function Playground() {
         return;
       }
 
-      const saved = restoreSession();
-      if (saved) {
-        setSource(saved.code);
-        setPackages(saved.packages);
-        setActiveExample(saved.exampleId);
+      const handoff = takePracticeHandoff();
+
+      if (handoff) {
+        setSource(handoff.code);
+        setPackages(handoff.packages);
+        setActiveExample(null);
+        setHandoffTitle(handoff.title);
+      } else {
+        const saved = restoreSession();
+
+        if (saved) {
+          setSource(saved.code);
+          setPackages(saved.packages);
+          setActiveExample(saved.exampleId);
+        }
       }
+
       setHydrated(true);
     }, 0);
 
@@ -317,6 +330,7 @@ export function Playground() {
     setSource(example.code);
     setPackages(example.packages);
     setActiveExample(example.id);
+    setHandoffTitle(null);
     setResult(null);
     setBootError(null);
     setCopied(false);
@@ -329,6 +343,7 @@ export function Playground() {
 
     setSource("");
     setActiveExample(null);
+    setHandoffTitle(null);
     setResult(null);
     setBootError(null);
     setCopied(false);
@@ -379,7 +394,9 @@ export function Playground() {
                 {activeExample
                   ? examples.find((example) => example.id === activeExample)
                       ?.label ?? "Custom session"
-                  : "Custom session"}
+                  : handoffTitle
+                    ? `Practice: ${handoffTitle}`
+                    : "Custom session"}
               </p>
             </div>
 

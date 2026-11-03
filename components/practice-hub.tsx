@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ExerciseCard } from "@/components/exercise-card";
 import type { Challenge } from "@/content/practice/schema";
 import { cn } from "@/lib/cn";
 import { getDailyChallenge } from "@/lib/practice/daily";
+import { savePracticeHandoff } from "@/lib/practice/handoff";
 
 type PracticeHubProps = {
   challenges: Challenge[];
@@ -13,6 +15,7 @@ type PracticeHubProps = {
 };
 
 export function PracticeHub({ challenges, topics }: PracticeHubProps) {
+  const router = useRouter();
   const [difficulty, setDifficulty] = useState("all");
   const [topic, setTopic] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -35,6 +38,26 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
     challenges.find((challenge) => challenge.id === selectedId) ??
     filtered[0] ??
     null;
+
+  const handleRandom = () => {
+    if (filtered.length === 0) {
+      return;
+    }
+
+    const pool =
+      filtered.length > 1
+        ? filtered.filter((challenge) => challenge.id !== selected?.id)
+        : filtered;
+    setSelectedId(pool[Math.floor(Math.random() * pool.length)].id);
+  };
+
+  const handleOpenPlayground = () => {
+    if (!selected || !savePracticeHandoff(selected)) {
+      return;
+    }
+
+    router.push("/playground");
+  };
 
   return (
     <div>
@@ -80,15 +103,24 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
           <p className="text-xs text-muted" role="status">
             {filtered.length} challenge{filtered.length === 1 ? "" : "s"} match.
           </p>
-          {dailyChallenge ? (
+          <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-paper transition-colors hover:bg-ink-soft"
-              onClick={() => setSelectedId(dailyChallenge.id)}
+              className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-ink/30"
+              onClick={handleRandom}
               type="button"
             >
-              Start today&apos;s drill
+              Surprise me
             </button>
-          ) : null}
+            {dailyChallenge ? (
+              <button
+                className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-paper transition-colors hover:bg-ink-soft"
+                onClick={() => setSelectedId(dailyChallenge.id)}
+                type="button"
+              >
+                Start today&apos;s drill
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -133,12 +165,21 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
           {selected ? (
             <div>
               <ExerciseCard exercise={selected} />
-              <Link
-                className="mt-3 inline-flex text-sm font-semibold text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
-                href={selected.lessonHref}
-              >
-                Review the related lesson
-              </Link>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <Link
+                  className="inline-flex text-sm font-semibold text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
+                  href={selected.lessonHref}
+                >
+                  Review the related lesson
+                </Link>
+                <button
+                  className="inline-flex text-sm font-semibold text-ink-soft underline decoration-line underline-offset-4 hover:text-ink"
+                  onClick={handleOpenPlayground}
+                  type="button"
+                >
+                  Open in playground
+                </button>
+              </div>
             </div>
           ) : (
             <p className="rounded-xl border border-line bg-surface p-6 text-sm text-muted">
