@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { libraries } from "../content/libraries";
+import { challenges } from "../content/practice";
 import {
   getLibraryCounts,
   getLibraryLessons,
@@ -53,6 +54,23 @@ describe("lesson registry", () => {
       expect(lesson.sections.length).toBeGreaterThan(0);
       expect(lesson.exercises.length).toBeGreaterThan(0);
       expect(lesson.minutes).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("practice registry", () => {
+  it("ships a varied starter deck", () => {
+    expect(challenges).toHaveLength(24);
+    expect(new Set(challenges.map((challenge) => challenge.id)).size).toBe(
+      challenges.length,
+    );
+    expect(new Set(challenges.map((challenge) => challenge.difficulty))).toEqual(
+      new Set(["beginner", "intermediate", "advanced"]),
+    );
+
+    for (const challenge of challenges) {
+      expect(challenge.tests.length).toBeGreaterThan(0);
+      expect(challenge.lessonHref.startsWith("/learn/")).toBe(true);
     }
   });
 });
