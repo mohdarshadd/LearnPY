@@ -396,4 +396,200 @@ print(x)`,
     ],
     related: ["numpy-default-rng", "numpy-array"],
   },
+  {
+    id: "numpy-clip",
+    library: "numpy",
+    slug: "clip",
+    symbol: "np.clip",
+    signature: "np.clip(a, a_min, a_max)",
+    summary: "Limit every value in an array to a fixed range.",
+    description:
+      "np.clip returns a new array where values below a_min become a_min and values above a_max become a_max. It is a compact way to winsorize features or keep predictions inside valid bounds.",
+    parameters: [
+      {
+        name: "a",
+        type: "array_like",
+        description: "Values to limit.",
+      },
+      {
+        name: "a_min",
+        type: "scalar or array_like",
+        description: "Lower bound, or None to leave the lower side alone.",
+      },
+      {
+        name: "a_max",
+        type: "scalar or array_like",
+        description: "Upper bound, or None to leave the upper side alone.",
+      },
+    ],
+    returns: "ndarray",
+    example: {
+      code: `import numpy as np
+
+scores = np.array([-3, 4, 9, 12])
+print(np.clip(scores, 0, 10))`,
+      output: "[ 0  4  9 10]",
+    },
+    pitfalls: [
+      "Clipping hides extreme values instead of explaining them; inspect them first.",
+      "Fit clipping bounds on training data only so test outliers stay honest.",
+    ],
+    related: ["numpy-where", "numpy-mean"],
+  },
+  {
+    id: "numpy-concatenate",
+    library: "numpy",
+    slug: "concatenate",
+    symbol: "np.concatenate",
+    signature: "np.concatenate((a1, a2, ...), axis=0)",
+    summary: "Join arrays along an existing axis.",
+    description:
+      "np.concatenate stacks arrays that share every dimension except the chosen axis. Use it to combine feature blocks or append train and test predictions, and use np.vstack or np.hstack when you want the common shortcut.",
+    parameters: [
+      {
+        name: "arrays",
+        type: "sequence of ndarray",
+        description: "Arrays with matching shapes except along axis.",
+      },
+      {
+        name: "axis",
+        type: "int, optional",
+        description: "Axis along which to join; default zero.",
+        optional: true,
+      },
+    ],
+    returns: "ndarray",
+    example: {
+      code: `import numpy as np
+
+age = np.array([[21], [34]])
+income = np.array([[40.0], [55.0]])
+print(np.concatenate([age, income], axis=1))`,
+      output: "[[21. 40.]\n [34. 55.]]",
+    },
+    pitfalls: [
+      "All other dimensions must match exactly or NumPy raises an error.",
+      "Use np.column_stack for one-dimensional features that need a new axis.",
+    ],
+    related: ["numpy-reshape", "numpy-array"],
+  },
+  {
+    id: "numpy-argmax",
+    library: "numpy",
+    slug: "argmax",
+    symbol: "np.argmax",
+    signature: "np.argmax(a, axis=None)",
+    summary: "Return the index of the largest value.",
+    description:
+      "np.argmax finds the position of the maximum along an axis. For a matrix of class scores it turns each row into the predicted class index, which is the usual bridge between probabilities and labels.",
+    parameters: [
+      {
+        name: "a",
+        type: "array_like",
+        description: "Values to search.",
+      },
+      {
+        name: "axis",
+        type: "int, optional",
+        description: "Axis to reduce; default flattens the input.",
+        optional: true,
+      },
+    ],
+    returns: "ndarray or int",
+    example: {
+      code: `import numpy as np
+
+scores = np.array([[0.1, 0.7, 0.2], [0.8, 0.1, 0.1]])
+print(np.argmax(scores, axis=1))`,
+      output: "[1 0]",
+    },
+    pitfalls: [
+      "Ties return the first maximum, so do not rely on a stable tie policy.",
+      "For calibrated probabilities use argmax on the probability matrix, not raw scores.",
+    ],
+    related: ["numpy-mean", "numpy-where"],
+  },
+  {
+    id: "numpy-percentile",
+    library: "numpy",
+    slug: "percentile",
+    symbol: "np.percentile",
+    signature: "np.percentile(a, q, axis=None)",
+    summary: "Compute a percentile of the values in an array.",
+    description:
+      "np.percentile summarizes a distribution at a chosen rank. It is useful for robust feature ranges, clipping thresholds, and reading the spread of residuals without assuming a normal distribution.",
+    parameters: [
+      {
+        name: "a",
+        type: "array_like",
+        description: "Values to summarize.",
+      },
+      {
+        name: "q",
+        type: "float or array_like",
+        description: "Percentile or percentiles between zero and one hundred.",
+      },
+      {
+        name: "axis",
+        type: "int, optional",
+        description: "Axis to reduce; default flattens the input.",
+        optional: true,
+      },
+    ],
+    returns: "ndarray or scalar",
+    example: {
+      code: `import numpy as np
+
+latency = np.array([12, 15, 18, 21, 240])
+print(np.percentile(latency, [50, 95]))`,
+      output: "[18. 240.]",
+    },
+    pitfalls: [
+      "The default linear interpolation can return a value that was never observed.",
+      "Percentiles are not additive across groups; recompute after combining data.",
+    ],
+    related: ["numpy-mean", "numpy-clip"],
+  },
+  {
+    id: "numpy-linalg-norm",
+    library: "numpy",
+    slug: "linalg-norm",
+    symbol: "np.linalg.norm",
+    signature: "np.linalg.norm(x, ord=None, axis=None)",
+    summary: "Measure the length of a vector or matrix.",
+    description:
+      "np.linalg.norm computes vector and matrix norms. Row-wise L2 norms are the usual way to build distance features, normalize embeddings, or check how far a prediction moved from a baseline.",
+    parameters: [
+      {
+        name: "x",
+        type: "array_like",
+        description: "Vector or matrix to measure.",
+      },
+      {
+        name: "ord",
+        type: "int or str, optional",
+        description: "Norm order; default is the L2 norm for vectors.",
+        optional: true,
+      },
+      {
+        name: "axis",
+        type: "int or tuple, optional",
+        description: "Axis or axes to reduce.",
+        optional: true,
+      },
+    ],
+    returns: "ndarray or float",
+    example: {
+      code: `import numpy as np
+
+vec = np.array([[3.0, 4.0], [5.0, 12.0]])
+print(np.linalg.norm(vec, axis=1))`,
+      output: "[ 5. 13.]",
+    },
+    pitfalls: [
+      "A huge norm can mean a real outlier or an unscaled feature; check units.",
+      "For squared distances skip the square root and save a little work.",
+    ],
+    related: ["numpy-linalg-solve", "numpy-array"],
+  },
 ];

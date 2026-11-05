@@ -240,4 +240,209 @@ print(scores.merge(teams, on="id"))`,
     ],
     related: ["pandas-groupby", "pandas-dataframe"],
   },
+  {
+    id: "pandas-fillna",
+    library: "pandas",
+    slug: "fillna",
+    symbol: "DataFrame.fillna",
+    signature: "DataFrame.fillna(value=None, *, method=None, axis=None, inplace=False)",
+    summary: "Replace missing values with a constant or computed value.",
+    description:
+      "fillna returns a copy with missing values replaced. Prefer fitting the replacement value on training data, especially when the value is a mean or median, so the test set does not influence preprocessing.",
+    parameters: [
+      {
+        name: "value",
+        type: "scalar, dict, Series, or DataFrame",
+        description: "Replacement value or per-column mapping.",
+      },
+      {
+        name: "method",
+        type: "str, optional",
+        description: "Fill forward or backward instead of using a value.",
+        optional: true,
+      },
+      {
+        name: "inplace",
+        type: "bool, optional",
+        description: "Mutate the DataFrame instead of returning a copy.",
+        optional: true,
+      },
+    ],
+    returns: "DataFrame or None",
+    example: {
+      code: `import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({"score": [10.0, np.nan, 14.0]})
+print(df.fillna({"score": df["score"].mean()}))`,
+      output: "   score\n0   10.0\n1   12.0\n2   14.0",
+    },
+    pitfalls: [
+      "Computing the fill value on all rows leaks test information into training.",
+      "A single constant can hide why a value was missing; consider a missing indicator.",
+    ],
+    related: ["pandas-dataframe", "pandas-groupby"],
+  },
+  {
+    id: "pandas-cut",
+    library: "pandas",
+    slug: "cut",
+    symbol: "pd.cut",
+    signature: "pd.cut(x, bins, right=True, labels=None)",
+    summary: "Bin continuous values into discrete intervals.",
+    description:
+      "pd.cut turns a numeric column into ordered bins. Equal-width bins are easy to explain, while quantile bins keep group sizes balanced; pass explicit edges when the boundaries have real meaning.",
+    parameters: [
+      {
+        name: "x",
+        type: "array_like",
+        description: "Values to bin.",
+      },
+      {
+        name: "bins",
+        type: "int, sequence, or IntervalIndex",
+        description: "Number of equal-width bins or explicit edges.",
+      },
+      {
+        name: "labels",
+        type: "array_like, optional",
+        description: "Names for the resulting categories.",
+        optional: true,
+      },
+    ],
+    returns: "Categorical",
+    example: {
+      code: `import pandas as pd
+
+age = pd.Series([18, 25, 41, 67])
+print(pd.cut(age, bins=[0, 30, 60, 100], labels=["young", "mid", "senior"]))`,
+      output: "0     young\n1     young\n2       mid\n3    senior\ndtype: category",
+    },
+    pitfalls: [
+      "The right edge is included by default; check the boundary rows.",
+      "Bins derived from the full dataset should be reused on test data, not recomputed.",
+    ],
+    related: ["pandas-value-counts", "pandas-groupby"],
+  },
+  {
+    id: "pandas-astype",
+    library: "pandas",
+    slug: "astype",
+    symbol: "DataFrame.astype",
+    signature: "DataFrame.astype(dtype, copy=True)",
+    summary: "Convert columns to another dtype.",
+    description:
+      "astype casts values to a chosen type. Convert category codes to numeric types before models that require numbers, and use nullable pandas dtypes such as Int64 when missing values must survive an integer conversion.",
+    parameters: [
+      {
+        name: "dtype",
+        type: "dtype or dict",
+        description: "Target dtype or a mapping from column to dtype.",
+      },
+      {
+        name: "copy",
+        type: "bool, optional",
+        description: "Return a copy even when no conversion is needed.",
+        optional: true,
+      },
+    ],
+    returns: "DataFrame",
+    example: {
+      code: `import pandas as pd
+
+df = pd.DataFrame({"code": ["1", "2", "3"]})
+print(df.astype({"code": "int64"}).dtypes)`,
+      output: "code    int64\ndtype: object",
+    },
+    pitfalls: [
+      "astype fails on missing values when the target is a plain int dtype.",
+      "Casting a category to int uses the category codes, not the label text.",
+    ],
+    related: ["pandas-dataframe", "pandas-get-dummies"],
+  },
+  {
+    id: "pandas-value-counts",
+    library: "pandas",
+    slug: "value-counts",
+    symbol: "Series.value_counts",
+    signature: "Series.value_counts(normalize=False, sort=True, dropna=True)",
+    summary: "Count how often each value appears.",
+    description:
+      "value_counts is the quickest way to audit class balance, inspect category frequencies, and decide whether a column is too rare to encode. Use normalize=True to read proportions instead of counts.",
+    parameters: [
+      {
+        name: "normalize",
+        type: "bool, optional",
+        description: "Return proportions instead of counts.",
+        optional: true,
+      },
+      {
+        name: "sort",
+        type: "bool, optional",
+        description: "Order by descending count.",
+        optional: true,
+      },
+      {
+        name: "dropna",
+        type: "bool, optional",
+        description: "Exclude missing values.",
+        optional: true,
+      },
+    ],
+    returns: "Series",
+    example: {
+      code: `import pandas as pd
+
+labels = pd.Series(["cat", "dog", "dog", "cat", "dog"])
+print(labels.value_counts(normalize=True))`,
+      output: "dog    0.6\ncat    0.4\nName: proportion, dtype: float64",
+    },
+    pitfalls: [
+      "The result is sorted by count, not by category order.",
+      "Class imbalance is easier to see with normalize=True on the training labels only.",
+    ],
+    related: ["pandas-groupby", "pandas-cut"],
+  },
+  {
+    id: "pandas-get-dummies",
+    library: "pandas",
+    slug: "get-dummies",
+    symbol: "pd.get_dummies",
+    signature: "pd.get_dummies(data, columns=None, drop_first=False, dtype=None)",
+    summary: "Create indicator columns for categorical values.",
+    description:
+      "get_dummies is a fast pandas shortcut for one-hot encoding. For production pipelines prefer scikit-learn OneHotEncoder so the training categories, unknown handling, and column order are stored with the model.",
+    parameters: [
+      {
+        name: "data",
+        type: "DataFrame or Series",
+        description: "Data containing categorical columns.",
+      },
+      {
+        name: "columns",
+        type: "list, optional",
+        description: "Columns to encode; default encodes every categorical column.",
+        optional: true,
+      },
+      {
+        name: "drop_first",
+        type: "bool, optional",
+        description: "Drop one level to avoid perfect collinearity.",
+        optional: true,
+      },
+    ],
+    returns: "DataFrame",
+    example: {
+      code: `import pandas as pd
+
+df = pd.DataFrame({"team": ["red", "blue", "red"]})
+print(pd.get_dummies(df, columns=["team"]))`,
+      output: "   team_blue  team_red\n0      False      True\n1       True     False\n2      False      True",
+    },
+    pitfalls: [
+      "Encoding train and test separately can produce different columns.",
+      "drop_first changes interpretation; keep it consistent between fit and inference.",
+    ],
+    related: ["pandas-astype", "pandas-dataframe"],
+  },
 ];

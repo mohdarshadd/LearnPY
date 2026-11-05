@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { libraries } from "../content/libraries";
+import { mlApis, mlCategories } from "../content/ml";
 import { challenges } from "../content/practice";
 import {
   getLibraryCounts,
@@ -77,7 +78,7 @@ describe("practice registry", () => {
 
 describe("reference registry", () => {
   it("covers all four libraries with unique routes", () => {
-    expect(references).toHaveLength(26);
+    expect(references).toHaveLength(36);
     expect(new Set(references.map((entry) => entry.id)).size).toBe(
       references.length,
     );
@@ -91,6 +92,21 @@ describe("reference registry", () => {
   it("resolves every reference by library and slug", () => {
     for (const entry of references) {
       expect(getReference(entry.library, entry.slug)).toBe(entry);
+    }
+  });
+});
+
+describe("ML API catalog", () => {
+  it("covers every category with a broad, uniquely keyed atlas", () => {
+    expect(mlApis.length).toBeGreaterThanOrEqual(180);
+    expect(new Set(mlApis.map((api) => api.id)).size).toBe(mlApis.length);
+    expect(new Set(mlApis.map((api) => api.category))).toEqual(
+      new Set(mlCategories.map((category) => category.id)),
+    );
+
+    for (const api of mlApis) {
+      expect(api.signature.length).toBeGreaterThan(0);
+      expect(api.summary.length).toBeGreaterThan(0);
     }
   });
 });
