@@ -78,7 +78,7 @@ describe("practice registry", () => {
 
 describe("reference registry", () => {
   it("covers all four libraries with unique routes", () => {
-    expect(references).toHaveLength(36);
+    expect(references).toHaveLength(40);
     expect(new Set(references.map((entry) => entry.id)).size).toBe(
       references.length,
     );

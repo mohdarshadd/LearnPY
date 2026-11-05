@@ -228,4 +228,176 @@ fig.savefig("readings.png", dpi=150, bbox_inches="tight")`,
     ],
     related: ["matplotlib-subplots", "matplotlib-set"],
   },
+  {
+    id: "matplotlib-confusion-matrix-display",
+    library: "matplotlib",
+    slug: "confusion-matrix-display",
+    symbol: "ConfusionMatrixDisplay",
+    signature: "ConfusionMatrixDisplay(confusion_matrix, display_labels=None)",
+    summary: "Draw a labeled confusion matrix from scikit-learn output.",
+    description:
+      "ConfusionMatrixDisplay wraps a confusion matrix in a matplotlib axes. Call plot to render counts and optionally normalize rows so each true class sums to one.",
+    parameters: [
+      {
+        name: "confusion_matrix",
+        type: "ndarray",
+        description: "Counts from sklearn.metrics.confusion_matrix.",
+      },
+      {
+        name: "display_labels",
+        type: "array-like, optional",
+        description: "Tick labels for the classes.",
+        optional: true,
+      },
+      {
+        name: "normalize",
+        type: "str, optional",
+        description: "Use 'true' to normalize rows when plotting.",
+        optional: true,
+      },
+    ],
+    returns: "ConfusionMatrixDisplay",
+    example: {
+      code: `import matplotlib.pyplot as plt
+from sklearn.metrics import ConfusionMatrixDisplay
+
+cm = [[8, 2], [1, 9]]
+ConfusionMatrixDisplay(cm, display_labels=["no", "yes"]).plot()
+plt.show()`,
+    },
+    pitfalls: [
+      "Counts hide class imbalance; normalize rows when comparing classes of different sizes.",
+      "Label order must match the matrix order or the display will read backwards.",
+    ],
+    related: ["matplotlib-subplots", "matplotlib-legend"],
+  },
+  {
+    id: "matplotlib-roc-curve-display",
+    library: "matplotlib",
+    slug: "roc-curve-display",
+    symbol: "RocCurveDisplay",
+    signature: "RocCurveDisplay.from_estimator(estimator, X, y)",
+    summary: "Plot a ROC curve directly from a fitted classifier.",
+    description:
+      "RocCurveDisplay.from_estimator scores the model, computes false and true positive rates, and plots the curve. from_predictions plots precomputed probabilities instead.",
+    parameters: [
+      {
+        name: "estimator",
+        type: "estimator",
+        description: "A fitted classifier with predict_proba or decision_function.",
+      },
+      {
+        name: "X",
+        type: "array-like",
+        description: "Feature matrix to score.",
+      },
+      {
+        name: "y",
+        type: "array-like",
+        description: "True binary labels.",
+      },
+    ],
+    returns: "RocCurveDisplay",
+    example: {
+      code: `import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import RocCurveDisplay
+
+model = LogisticRegression().fit(X_train, y_train)
+RocCurveDisplay.from_estimator(model, X_test, y_test)
+plt.show()`,
+    },
+    pitfalls: [
+      "A curve computed on training data looks optimistic; plot the test fold.",
+      "ROC can look strong when positives are rare; read the precision-recall curve too.",
+    ],
+    related: ["matplotlib-confusion-matrix-display", "matplotlib-plot"],
+  },
+  {
+    id: "matplotlib-precision-recall-display",
+    library: "matplotlib",
+    slug: "precision-recall-display",
+    symbol: "PrecisionRecallDisplay",
+    signature: "PrecisionRecallDisplay.from_estimator(estimator, X, y)",
+    summary: "Plot precision against recall for a binary classifier.",
+    description:
+      "PrecisionRecallDisplay shows the tradeoff between finding positives and avoiding false alarms. The baseline is the positive rate, which makes it more informative than ROC under heavy class imbalance.",
+    parameters: [
+      {
+        name: "estimator",
+        type: "estimator",
+        description: "A fitted classifier with predict_proba or decision_function.",
+      },
+      {
+        name: "X",
+        type: "array-like",
+        description: "Feature matrix to score.",
+      },
+      {
+        name: "y",
+        type: "array-like",
+        description: "True binary labels.",
+      },
+    ],
+    returns: "PrecisionRecallDisplay",
+    example: {
+      code: `import matplotlib.pyplot as plt
+from sklearn.metrics import PrecisionRecallDisplay
+
+PrecisionRecallDisplay.from_estimator(model, X_test, y_test)
+plt.show()`,
+    },
+    pitfalls: [
+      "The no-skill baseline equals the positive class rate, not 0.5.",
+      "Precision at one threshold does not describe the whole curve.",
+    ],
+    related: ["matplotlib-roc-curve-display", "matplotlib-plot"],
+  },
+  {
+    id: "matplotlib-learning-curve-display",
+    library: "matplotlib",
+    slug: "learning-curve-display",
+    symbol: "LearningCurveDisplay",
+    signature: "LearningCurveDisplay.from_estimator(estimator, X, y, cv=5)",
+    summary: "Plot training and validation scores as training size grows.",
+    description:
+      "LearningCurveDisplay runs cross-validation at increasing training sizes and plots both curves. A large persistent gap suggests variance, while both curves converging low suggests the model is too simple.",
+    parameters: [
+      {
+        name: "estimator",
+        type: "estimator",
+        description: "Model to evaluate; it is refit at each training size.",
+      },
+      {
+        name: "X",
+        type: "array-like",
+        description: "Feature matrix.",
+      },
+      {
+        name: "y",
+        type: "array-like",
+        description: "Target labels or values.",
+      },
+      {
+        name: "cv",
+        type: "int or splitter, optional",
+        description: "Cross-validation strategy.",
+        optional: true,
+      },
+    ],
+    returns: "LearningCurveDisplay",
+    example: {
+      code: `import matplotlib.pyplot as plt
+from sklearn.model_selection import LearningCurveDisplay
+from sklearn.ensemble import RandomForestClassifier
+
+LearningCurveDisplay.from_estimator(RandomForestClassifier(), X, y, cv=5)
+plt.show()`,
+    },
+    pitfalls: [
+      "The full curve is expensive; start with a smaller number of training sizes.",
+      "Training and validation axes can use different scoring scales; check the labels.",
+    ],
+    related: ["matplotlib-roc-curve-display", "matplotlib-subplots"],
+  },
 ];
