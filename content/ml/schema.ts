@@ -24,6 +24,7 @@ export const mlLibrarySchema = z.enum([
   "numpy",
   "pandas",
   "matplotlib",
+  "joblib",
 ]);
 
 export const mlApiSchema = z.object({
