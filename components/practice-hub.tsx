@@ -25,6 +25,7 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
   const completedChallengeIds = useProgressStore(
     (state) => state.completedChallengeIds,
   );
+  const practiceDays = useProgressStore((state) => state.practiceDays);
   const markChallengeComplete = useProgressStore(
     (state) => state.markChallengeComplete,
   );
@@ -68,9 +69,58 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
     router.push("/playground");
   };
 
+  const nextChallenge =
+    challenges.find(
+      (challenge) => !completedChallengeIds.includes(challenge.id),
+    ) ?? challenges[0];
+
   return (
     <div>
-      <div className="rounded-[1.25rem] border border-line bg-surface p-4 sm:p-5">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-muted">
+            Cleared
+          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">
+            {hydrated ? completedChallengeIds.length : 0}
+            <span className="text-sm font-normal text-muted">
+              {" "}
+              / {challenges.length}
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {hydrated && completedChallengeIds.length === challenges.length
+              ? "Every drill is cleared."
+              : "Pass the tests to mark a drill."}
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-muted">
+            Practice days
+          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">
+            {hydrated ? practiceDays.length : 0}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            One local day is recorded per clear.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <p className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-muted">
+            Next up
+          </p>
+          <p className="mt-2 line-clamp-2 font-semibold tracking-tight">
+            {hydrated && nextChallenge ? nextChallenge.title : "Pick a drill"}
+          </p>
+          <p className="mt-1 text-xs capitalize text-muted">
+            {hydrated && nextChallenge
+              ? nextChallenge.difficulty
+              : "All levels available"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[1.25rem] border border-line bg-surface p-4 sm:p-5">
         <p className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-muted">
           Filter the deck
         </p>
