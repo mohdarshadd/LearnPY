@@ -30,8 +30,8 @@ export function PracticeHub({ challenges, topics }: PracticeHubProps) {
     (state) => state.markChallengeComplete,
   );
   const dailyChallenge = useMemo(
-    () => getDailyChallenge(challenges),
-    [challenges],
+    () => (hydrated ? getDailyChallenge(challenges) : null),
+    [challenges, hydrated],
   );
 
   const filtered = useMemo(
