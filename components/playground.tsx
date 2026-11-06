@@ -109,7 +109,66 @@ const practicePresets = practiceChallenges.filter((challenge) =>
 );
 
 const STORAGE_KEY = "learnpy-playground-v1";
+const SOLUTIONS_KEY = "learnpy-solutions-v1";
 const knownPackages = new Set(packageOptions.map((option) => option.id));
+
+type SavedSolutions = Record<string, string>;
+
+function readSavedSolutions(): SavedSolutions {
+  try {
+    const raw = window.localStorage.getItem(SOLUTIONS_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    const solutions: SavedSolutions = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "string") {
+        solutions[key] = value;
+      }
+    }
+
+    return solutions;
+  } catch {
+    return {};
+  }
+}
+
+function readSavedSolution(key: string): string | null {
+  return readSavedSolutions()[key] ?? null;
+}
+
+function writeSavedSolution(key: string, code: string): boolean {
+  try {
+    const solutions = readSavedSolutions();
+    solutions[key] = code;
+    window.localStorage.setItem(SOLUTIONS_KEY, JSON.stringify(solutions));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function downloadSource(code: string, label: string) {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  const blob = new Blob([code], { type: "text/x-python;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${slug || "learnpy-solution"}.py`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 
 function restoreSession():
   | { code: string; packages: string[]; exampleId: string | null }
@@ -167,6 +226,8 @@ export function Playground() {
   const [copied, setCopied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [handoffTitle, setHandoffTitle] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [saveNote, setSaveNote] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
 
   const runnerRef = useRef<PyodideRunnerClient | null>(null);
@@ -185,10 +246,11 @@ export function Playground() {
       const handoff = takePracticeHandoff();
 
       if (handoff) {
-        setSource(handoff.code);
+        setSource(readSavedSolution(handoff.challengeId) ?? handoff.code);
         setPackages(handoff.packages);
         setActiveExample(null);
         setHandoffTitle(handoff.title);
+        setChallengeId(handoff.challengeId);
       } else {
         const saved = restoreSession();
 
@@ -343,6 +405,8 @@ export function Playground() {
     setPackages(example.packages);
     setActiveExample(example.id);
     setHandoffTitle(null);
+    setChallengeId(null);
+    setSaveNote(null);
     setResult(null);
     setBootError(null);
     setCopied(false);
@@ -353,10 +417,12 @@ export function Playground() {
       return;
     }
 
-    setSource(preset.starterCode);
+    setSource(readSavedSolution(preset.id) ?? preset.starterCode);
     setPackages(preset.packages);
     setActiveExample(null);
     setHandoffTitle(preset.title);
+    setChallengeId(preset.id);
+    setSaveNote(null);
     setResult(null);
     setBootError(null);
     setCopied(false);
@@ -370,9 +436,40 @@ export function Playground() {
     setSource("");
     setActiveExample(null);
     setHandoffTitle(null);
+    setChallengeId(null);
+    setSaveNote(null);
     setResult(null);
     setBootError(null);
     setCopied(false);
+  };
+
+  const solutionKey = challengeId ?? activeExample ?? "scratch";
+
+  const handleSaveSolution = () => {
+    if (!source.trim()) {
+      setBootError("Write some Python before saving a solution.");
+      return;
+    }
+
+    if (writeSavedSolution(solutionKey, source)) {
+      setSaveNote("Solution saved in this browser.");
+      window.setTimeout(() => setSaveNote(null), 2000);
+    } else {
+      setBootError("The browser blocked local storage.");
+    }
+  };
+
+  const handleDownload = () => {
+    if (!source.trim()) {
+      setBootError("Write some Python before downloading.");
+      return;
+    }
+
+    const label =
+      handoffTitle ??
+      examples.find((example) => example.id === activeExample)?.label ??
+      "learnpy-solution";
+    downloadSource(source, label);
   };
 
   const togglePackage = (id: string) => {
@@ -503,6 +600,20 @@ export function Playground() {
               {copied ? "Copied" : "Copy"}
             </button>
             <button
+              className="rounded-full border border-white/20 px-3.5 py-2 text-sm font-medium text-paper/75 transition-colors hover:border-white/35 hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={handleSaveSolution}
+              type="button"
+            >
+              Save solution
+            </button>
+            <button
+              className="rounded-full border border-white/20 px-3.5 py-2 text-sm font-medium text-paper/75 transition-colors hover:border-white/35 hover:text-paper disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={handleDownload}
+              type="button"
+            >
+              Download .py
+            </button>
+            <button
               aria-pressed={focusMode}
               className={cn(
                 "rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
@@ -519,6 +630,15 @@ export function Playground() {
               Ctrl / &#8984; + Enter
             </p>
           </div>
+
+          {saveNote ? (
+            <p
+              aria-live="polite"
+              className="border-t border-white/10 px-4 py-2 text-xs text-acid sm:px-5"
+            >
+              {saveNote}
+            </p>
+          ) : null}
 
           <div
             aria-live="polite"
