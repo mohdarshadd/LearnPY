@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/learn",
     "/learn/start-here",
     "/reference",
+    "/reference/ml",
     "/playground",
     "/capstone",
     "/progress",

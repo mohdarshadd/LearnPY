@@ -29,6 +29,12 @@ export default function ReferencePage() {
         </div>
 
         <div className="relative mt-7 flex flex-wrap gap-2">
+          <Link
+            className="rounded-full border border-ink bg-ink px-3 py-1.5 text-xs font-semibold text-paper transition-colors hover:bg-ink-soft"
+            href="/reference/ml"
+          >
+            Open the ML API atlas
+          </Link>
           {libraries.map((library) => (
             <Link
               key={library.id}
