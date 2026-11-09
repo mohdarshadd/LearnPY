@@ -57,7 +57,7 @@ export function SiteFooter() {
 
       <div className="border-t border-line/70">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-5 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <p>© 2026 LearnPY. Built for curious people.</p>
+          <p>© 2026 LearnPY. Built by Mohd Arshad for curious people.</p>
           <p>
             Powered by{" "}
             <a
