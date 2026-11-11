@@ -99,6 +99,7 @@ export function createOrganizationJsonLd() {
     "@id": organizationId(),
     name: SITE_NAME,
     url: getAbsoluteUrl("/"),
+    logo: getAbsoluteUrl("/icon.svg"),
     description: SITE_DESCRIPTION,
     founder: {
       "@type": "Person",

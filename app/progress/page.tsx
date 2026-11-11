@@ -10,6 +10,7 @@ export const metadata = createPageMetadata({
   description:
     "See which LearnPY lessons you have completed, pick up where you left off, and reset saved progress on this device.",
   path: "/progress",
+  noIndex: true,
 });
 
 export default function ProgressPage() {
