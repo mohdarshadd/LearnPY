@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CodeBlock } from "@/components/code-block";
+import { JsonLd } from "@/components/json-ld";
 import { LibraryBadge } from "@/components/library-badge";
 import { getLibrary } from "@/content/libraries";
 import {
@@ -9,7 +10,11 @@ import {
   getReferenceById,
   references,
 } from "@/content/registry";
-import { createPageMetadata } from "@/lib/seo";
+import {
+  createBreadcrumbJsonLd,
+  createPageMetadata,
+  createTechArticleJsonLd,
+} from "@/lib/seo";
 
 type ReferencePageProps = {
   params: Promise<{ library: string; slug: string }>;
@@ -55,12 +60,30 @@ export default async function ReferencePage({ params }: ReferencePageProps) {
   }
 
   const libraryInfo = getLibrary(reference.library);
+  const libraryName = libraryInfo?.name ?? reference.library;
+  const referencePath = `/reference/${reference.library}/${reference.slug}`;
   const related = reference.related
     .map((id) => getReferenceById(id))
     .filter((item) => item !== undefined);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-5 pb-24 pt-10 sm:px-8 sm:pt-14">
+      <JsonLd
+        data={[
+          createTechArticleJsonLd({
+            headline: `${reference.symbol} reference`,
+            description: reference.summary,
+            path: referencePath,
+            libraryName,
+            symbol: reference.symbol,
+          }),
+          createBreadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Reference", path: "/reference" },
+            { name: reference.symbol, path: referencePath },
+          ]),
+        ]}
+      />
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>

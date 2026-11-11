@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JsonLd } from "@/components/json-ld";
 import { LibraryBadge } from "@/components/library-badge";
 import {
   getLibrary,
@@ -12,7 +13,7 @@ import {
   getStartHereLesson,
 } from "@/content/registry";
 import { cn } from "@/lib/cn";
-import { createPageMetadata } from "@/lib/seo";
+import { createBreadcrumbJsonLd, createPageMetadata } from "@/lib/seo";
 
 type LibraryPageProps = {
   params: Promise<{ library: string }>;
@@ -60,6 +61,13 @@ export default async function LibraryPage({ params }: LibraryPageProps) {
 
   return (
     <div>
+      <JsonLd
+        data={createBreadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Learn", path: "/learn" },
+          { name: library.name, path: `/learn/${library.id}` },
+        ])}
+      />
       <section className="relative overflow-hidden border-b border-line bg-paper-deep/35">
         <div aria-hidden="true" className={cn("h-1.5 w-full", style.bar)} />
         <div className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 sm:py-16">

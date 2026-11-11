@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LibraryBadge } from "@/components/library-badge";
 import { ContentBlocks } from "@/components/content-blocks";
 import { ExerciseCard } from "@/components/exercise-card";
+import { JsonLd } from "@/components/json-ld";
 import { Quiz } from "@/components/quiz";
 import { getLibrary, getTrackStyle } from "@/content/libraries";
 import {
@@ -12,6 +13,10 @@ import {
 import { isLibraryId, type Lesson } from "@/content/schema";
 import { cn } from "@/lib/cn";
 import { LessonCompletion } from "@/components/lesson-completion";
+import {
+  createBreadcrumbJsonLd,
+  createLearningResourceJsonLd,
+} from "@/lib/seo";
 
 function getTrackHref(lesson: Lesson) {
   return isLibraryId(lesson.library)
@@ -31,6 +36,10 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
   const style = getTrackStyle(lesson.library);
   const trackName = getTrackName(lesson);
   const trackHref = getTrackHref(lesson);
+  const lessonHref = getLessonHref(lesson);
+  const isTrackLesson = isLibraryId(lesson.library);
+  const courseName = isTrackLesson ? `${trackName} track` : "LearnPY orientation";
+  const courseHref = isTrackLesson ? trackHref : "/learn";
   const navigation = getLessonNavigation(lesson);
   const hasPractice = lesson.exercises.length > 0 || lesson.quiz.length > 0;
   const trackLessonIds = getLessons(lesson.library).map((item) => item.id);
@@ -43,6 +52,34 @@ export function LessonView({ lesson }: { lesson: Lesson }) {
 
   return (
     <div>
+      <JsonLd
+        data={[
+          createLearningResourceJsonLd({
+            name: lesson.title,
+            description: lesson.summary,
+            path: lessonHref,
+            libraryName: courseName,
+            libraryPath: courseHref,
+            level: lesson.level,
+            minutes: lesson.minutes,
+            objectives: lesson.objectives,
+          }),
+          createBreadcrumbJsonLd(
+            isTrackLesson
+              ? [
+                  { name: "Home", path: "/" },
+                  { name: "Learn", path: "/learn" },
+                  { name: trackName, path: trackHref },
+                  { name: lesson.title, path: lessonHref },
+                ]
+              : [
+                  { name: "Home", path: "/" },
+                  { name: "Learn", path: "/learn" },
+                  { name: lesson.title, path: lessonHref },
+                ],
+          ),
+        ]}
+      />
       <section className="relative overflow-hidden border-b border-line bg-paper-deep/35">
         <div aria-hidden="true" className={cn("h-1.5 w-full", style.bar)} />
         <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
