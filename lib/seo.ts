@@ -163,7 +163,7 @@ export function createLearningResourceJsonLd({
     teaches: objectives,
     isPartOf: {
       "@type": "Course",
-      name: `${libraryName} track`,
+      name: libraryName,
       url: getAbsoluteUrl(libraryPath),
     },
     provider: {
