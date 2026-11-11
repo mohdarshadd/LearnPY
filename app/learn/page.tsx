@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { LibraryCard } from "@/components/library-card";
 import { libraries } from "@/content/libraries";
@@ -9,12 +8,21 @@ import {
   getStartHereLesson,
   lessons,
 } from "@/content/registry";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Learn",
   description:
     "Pick a track and learn NumPy, pandas, Matplotlib, or scikit-learn with short lessons and real Python exercises in your browser.",
-};
+  path: "/learn",
+  keywords: [
+    "learn numpy",
+    "learn pandas",
+    "learn matplotlib",
+    "learn scikit-learn",
+    "python data science course",
+  ],
+});
 
 export default function LearnPage() {
   const counts = new Map(

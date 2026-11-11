@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LessonView } from "@/components/lesson-view";
-import { getLesson, lessons } from "@/content/registry";
+import { getLesson, getLessonHref, lessons } from "@/content/registry";
 import { isLibraryId } from "@/content/schema";
+import { createPageMetadata } from "@/lib/seo";
 
 type LessonPageProps = {
   params: Promise<{ library: string; slug: string }>;
@@ -27,10 +28,13 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
+  return createPageMetadata({
     title: lesson.title,
     description: lesson.summary,
-  };
+    path: getLessonHref(lesson),
+    type: "article",
+    keywords: [lesson.title, lesson.library, "python lesson", "interactive tutorial"],
+  });
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {

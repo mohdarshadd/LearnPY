@@ -1,15 +1,16 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ProgressBreakdown } from "@/components/progress-breakdown";
 import { ProgressOverview } from "@/components/progress-overview";
 import { libraries } from "@/content/libraries";
 import { getLessonHref, lessons } from "@/content/registry";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Progress",
   description:
     "See which LearnPY lessons you have completed, pick up where you left off, and reset saved progress on this device.",
-};
+  path: "/progress",
+});
 
 export default function ProgressPage() {
   const progressLessons = lessons.map((lesson) => ({

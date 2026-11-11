@@ -1,12 +1,20 @@
-import type { Metadata } from "next";
 import { PracticeHub } from "@/components/practice-hub";
 import { challengeTopics, challenges } from "@/content/practice";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Practice",
   description:
     "Short, runnable Python challenges for NumPy, pandas, Matplotlib, and scikit-learn with instant tests.",
-};
+  path: "/practice",
+  keywords: [
+    "python practice problems",
+    "numpy exercises",
+    "pandas exercises",
+    "scikit-learn exercises",
+    "interactive python challenges",
+  ],
+});
 
 export default function PracticePage() {
   return (

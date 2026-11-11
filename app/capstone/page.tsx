@@ -1,12 +1,19 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { CapstoneNotebook } from "@/components/capstone-notebook";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Capstone",
   description:
     "Take one dataset from a pandas table to a plotted exploration, a scikit-learn pipeline, and an honest evaluation in seven runnable cells.",
-};
+  path: "/capstone",
+  keywords: [
+    "python data science project",
+    "pandas sklearn capstone",
+    "machine learning project tutorial",
+    "end to end data science exercise",
+  ],
+});
 
 const stages = [
   "pandas: load",

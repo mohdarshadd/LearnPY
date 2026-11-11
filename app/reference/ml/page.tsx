@@ -1,13 +1,20 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { MlCatalog } from "@/components/ml-catalog";
 import { mlApis, mlCategories } from "@/content/ml";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "ML API atlas",
   description:
     "Browse scikit-learn, NumPy, pandas, and Matplotlib APIs by machine-learning workflow, with signatures, summaries, and library filters.",
-};
+  path: "/reference/ml",
+  keywords: [
+    "machine learning api reference",
+    "scikit-learn api map",
+    "ml workflow cheat sheet",
+    "python machine learning functions",
+  ],
+});
 
 export default function MlReferencePage() {
   return (

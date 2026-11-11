@@ -1,11 +1,19 @@
-import type { Metadata } from "next";
 import { Playground } from "@/components/playground";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Playground",
   description:
     "A scratchpad for real Python in your browser. Load NumPy, pandas, Matplotlib, and scikit-learn, then run and inspect the output.",
-};
+  path: "/playground",
+  keywords: [
+    "online python playground",
+    "run python in browser",
+    "numpy playground",
+    "pandas playground",
+    "python interpreter online",
+  ],
+});
 
 export default function PlaygroundPage() {
   return (

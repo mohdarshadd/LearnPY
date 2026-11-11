@@ -12,6 +12,7 @@ import {
   getStartHereLesson,
 } from "@/content/registry";
 import { cn } from "@/lib/cn";
+import { createPageMetadata } from "@/lib/seo";
 
 type LibraryPageProps = {
   params: Promise<{ library: string }>;
@@ -31,10 +32,17 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
+  return createPageMetadata({
     title: library.name,
     description: library.description,
-  };
+    path: `/learn/${library.id}`,
+    keywords: [
+      `learn ${library.name}`,
+      `${library.name} tutorial`,
+      `${library.name} course`,
+      ...library.topics.map((topic) => `${library.name} ${topic.toLowerCase()}`),
+    ],
+  });
 }
 
 export default async function LibraryPage({ params }: LibraryPageProps) {

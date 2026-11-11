@@ -9,6 +9,7 @@ import {
   getReferenceById,
   references,
 } from "@/content/registry";
+import { createPageMetadata } from "@/lib/seo";
 
 type ReferencePageProps = {
   params: Promise<{ library: string; slug: string }>;
@@ -31,10 +32,18 @@ export async function generateMetadata({
     return {};
   }
 
-  return {
+  return createPageMetadata({
     title: `${reference.symbol} reference`,
     description: reference.summary,
-  };
+    path: `/reference/${reference.library}/${reference.slug}`,
+    type: "article",
+    keywords: [
+      reference.symbol,
+      `${reference.library} ${reference.symbol}`,
+      `${reference.symbol} example`,
+      "python reference",
+    ],
+  });
 }
 
 export default async function ReferencePage({ params }: ReferencePageProps) {

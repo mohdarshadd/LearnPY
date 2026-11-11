@@ -1,14 +1,22 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ReferenceExplorer } from "@/components/reference-explorer";
 import { libraries } from "@/content/libraries";
 import { references } from "@/content/registry";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: "Reference",
   description:
     "Search concise NumPy, pandas, Matplotlib, and scikit-learn function references with signatures, examples, and pitfalls.",
-};
+  path: "/reference",
+  keywords: [
+    "numpy reference",
+    "pandas reference",
+    "matplotlib reference",
+    "scikit-learn reference",
+    "python api cheat sheet",
+  ],
+});
 
 export default function ReferencePage() {
   return (
