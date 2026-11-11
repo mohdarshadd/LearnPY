@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { JsonLd } from "@/components/json-ld";
+import { lessons, references } from "@/content/registry";
+import { createFaqJsonLd } from "@/lib/seo";
 
 const libraries = [
   {
@@ -65,9 +68,74 @@ const steps = [
   },
 ];
 
+const audiences = [
+  {
+    title: "Python beginners",
+    body: "You know variables and loops, but arrays, DataFrames, and model pipelines still feel like separate worlds. Start with the orientation and build one mental model at a time.",
+  },
+  {
+    title: "Analysts moving past spreadsheets",
+    body: "You already ask good questions of data. Learn the pandas and Matplotlib patterns that make those questions repeatable instead of manual.",
+  },
+  {
+    title: "ML learners who want reps",
+    body: "You have watched the tutorials. Now fit, evaluate, and debug real scikit-learn estimators until the workflow sticks.",
+  },
+];
+
+const popularPaths = [
+  { label: "NumPy arrays", href: "/learn/numpy" },
+  { label: "pandas DataFrames", href: "/learn/pandas" },
+  { label: "Matplotlib figures", href: "/learn/matplotlib" },
+  { label: "scikit-learn workflows", href: "/learn/sklearn" },
+  { label: "ML API atlas", href: "/reference/ml" },
+  { label: "Practice challenges", href: "/practice" },
+];
+
+const faqs = [
+  {
+    question: "Do I need to install Python or a notebook?",
+    answer:
+      "No. LearnPY runs Python and the data libraries in your browser through Pyodide, so lessons, practice challenges, and the playground work without a local install or a notebook server.",
+  },
+  {
+    question: "Is LearnPY free?",
+    answer:
+      "Yes. The lessons, function reference, ML API atlas, practice challenges, playground, and capstone are all free to use.",
+  },
+  {
+    question: "Which Python libraries can I learn?",
+    answer:
+      "The curriculum covers NumPy for arrays and vectorized math, pandas for tabular data, Matplotlib for visualization, and scikit-learn for machine learning. The reference includes 40 focused function pages and a 211-entry ML API atlas.",
+  },
+  {
+    question: "Does my code or progress leave my device?",
+    answer:
+      "Code runs locally in your browser. Lesson progress, practice state, and playground solutions are stored on your device, and LearnPY does not require an account or sign-in.",
+  },
+  {
+    question: "Can I use LearnPY on a phone or tablet?",
+    answer:
+      "Lessons, references, and progress pages are responsive and work in modern mobile browsers. The code editor is most comfortable on a larger screen, so practice sessions are easier on a laptop or desktop.",
+  },
+];
+
 export default function Home() {
+  const lessonCount = lessons.length;
+  const exerciseCount = lessons.reduce(
+    (total, lesson) => total + lesson.exercises.length,
+    0,
+  );
+  const stats = [
+    [String(lessonCount), "lessons"],
+    [String(exerciseCount), "exercises"],
+    [String(references.length), "references"],
+    ["4", "libraries"],
+  ];
+
   return (
     <>
+      <JsonLd data={createFaqJsonLd(faqs)} />
       <section className="relative overflow-hidden border-b border-line">
         <div
           aria-hidden="true"
@@ -113,11 +181,7 @@ export default function Home() {
             </div>
 
             <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-4 border-t border-line pt-6">
-              {[
-                ["14", "lessons"],
-                ["46", "exercises"],
-                ["4", "libraries"],
-              ].map(([value, label]) => (
+              {stats.map(([value, label]) => (
                 <div key={label} className="flex items-baseline gap-2">
                   <dt className="sr-only">{label}</dt>
                   <dd className="text-2xl font-semibold tracking-tight">{value}</dd>
@@ -286,6 +350,90 @@ export default function Home() {
             <span className="size-1.5 rounded-full bg-acid-deep" />
             Powered by Pyodide · no install · nothing leaves your device
           </p>
+        </div>
+      </section>
+
+      <section className="border-y border-line bg-paper-deep/50">
+        <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8">
+          <div className="max-w-2xl">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
+              Who it is for
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+              Built for people who learn by changing the code.
+            </h2>
+            <p className="mt-4 text-muted">
+              LearnPY is a guided practice space, not a video library. Every
+              track starts from a concrete mental model, then asks you to use it
+              in a runnable example.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {audiences.map((audience) => (
+              <article
+                key={audience.title}
+                className="rounded-[var(--radius-card)] border border-line bg-surface p-6"
+              >
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {audience.title}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  {audience.body}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <nav aria-labelledby="popular-paths" className="mt-12">
+            <h3
+              className="font-mono text-xs uppercase tracking-[0.16em] text-muted"
+              id="popular-paths"
+            >
+              Popular starting points
+            </h3>
+            <ul className="mt-4 flex flex-wrap gap-2">
+              {popularPaths.map((path) => (
+                <li key={path.href}>
+                  <Link
+                    className="inline-flex rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-ink/25 hover:text-ink"
+                    href={path.href}
+                  >
+                    {path.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-4xl px-5 py-20 sm:px-8">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">
+          Questions
+        </p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+          What learners ask before starting.
+        </h2>
+        <div className="mt-8 divide-y divide-line border-y border-line">
+          {faqs.map((faq) => (
+            <details key={faq.question} className="group py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6">
+                <span className="text-base font-semibold tracking-tight sm:text-lg">
+                  {faq.question}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="font-mono text-lg text-muted transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
+                {faq.answer}
+              </p>
+            </details>
+          ))}
         </div>
       </section>
 
